@@ -1,0 +1,31 @@
+{
+  "common": {
+    "visitor": "आगंतुक",
+    "send": "भेजें",
+    "cancel": "रद्द करें",
+    "report": "रिपोर्ट करें",
+    "block": "ब्लॉक करें",
+    "comingSoon": "जल्द आ रहा है"
+  },
+  "auth": {
+    "enterPhone": "अपना मोबाइल नंबर दर्ज करें",
+    "sendOtp": "OTP भेजें",
+    "enterOtp": "अपने फोन पर भेजा गया OTP दर्ज करें",
+    "verify": "सत्यापित करें",
+    "yourName": "आपका नाम",
+    "selectState": "अपना राज्य चुनें",
+    "selectDistrict": "अपना जिला चुनें",
+    "selectCity": "अपना शहर/गांव चुनें",
+    "selectMandal": "अपना मंडल चुनें",
+    "selectArea": "अपना क्षेत्र चुनें",
+    "finishSetup": "सेटअप पूरा करें"
+  },
+  "nav": {
+    "chat": "चैट",
+    "qa": "प्रश्न-उत्तर",
+    "status": "स्टेटस",
+    "marketplace": "मार्केटप्लेस",
+    "announcements": "घोषणाएं",
+    "more": "और"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "common": {
+    "visitor": "Visitor",
+    "send": "Send",
+    "cancel": "Cancel",
+    "report": "Report",
+    "block": "Block",
+    "comingSoon": "Coming soon"
+  },
+  "auth": {
+    "enterPhone": "Enter your mobile number",
+    "sendOtp": "Send OTP",
+    "enterOtp": "Enter the OTP sent to your phone",
+    "verify": "Verify",
+    "yourName": "Your name",
+    "selectState": "Select your state",
+    "selectDistrict": "Select your district",
+    "selectCity": "Select your city/village",
+    "selectMandal": "Select your mandal",
+    "selectArea": "Select your area",
+    "finishSetup": "Finish setup"
+  },
+  "nav": {
+    "chat": "Chat",
+    "qa": "Q&A",
+    "status": "Status",
+    "marketplace": "Marketplace",
+    "announcements": "Announcements",
+    "more": "More"
+  }
+}

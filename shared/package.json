@@ -1,0 +1,14 @@
+{
+  "name": "@easysociety/shared",
+  "version": "0.1.0",
+  "description": "Shared TypeScript types and constants for EasySociety backend and mobile",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
