@@ -19,6 +19,7 @@ const createListingSchema = z.object({
   contact_info: z.string().max(200).nullable().optional(),
   visibility_level: z.nativeEnum(VisibilityLevel).default(VisibilityLevel.AREA),
   photo_urls: z.array(z.string().url()).max(10).default([]),
+  details: z.record(z.any()).optional(),
 });
 
 router.get(
@@ -41,10 +42,13 @@ router.get(
       `SELECT l.id, l.user_id, l.location_id, l.visibility_level, l.category, l.sub_category,
               l.title, l.description, l.price, l.contact_info, l.is_active, l.created_at,
               u.name AS author_name, u.profile_photo_url AS author_photo,
+              loc.name AS location_label,
               COALESCE(r.count, 0) AS recommendation_count,
+              EXISTS(SELECT 1 FROM saved_listings sl WHERE sl.listing_id = l.id AND sl.user_id = $5) AS is_saved,
               (SELECT photo_url FROM listing_photos p WHERE p.listing_id = l.id ORDER BY order_index LIMIT 1) AS cover_photo_url
        FROM listings l
        LEFT JOIN users u ON u.id = l.user_id
+       LEFT JOIN locations loc ON loc.id = l.location_id
        LEFT JOIN (
          SELECT listing_id, COUNT(*) AS count FROM listing_recommendations GROUP BY listing_id
        ) r ON r.listing_id = l.id
@@ -54,7 +58,7 @@ router.get(
          AND ((l.location_id = ANY($1::uuid[])) OR ($2 AND l.visibility_level = 'national'))
        ORDER BY l.created_at DESC
        LIMIT 50`,
-      [scope.locationIds, scope.includeNational, req.auth!.userId, category ?? null],
+      [scope.locationIds, scope.includeNational, req.auth!.userId, category ?? null, req.auth!.userId],
     );
 
     const withTags = await attachVisitorTags(rows, viewerLocationId);
@@ -85,6 +89,46 @@ router.post(
       await pool.query(
         `INSERT INTO listing_photos (listing_id, photo_url, order_index) VALUES ${values}`,
         [listing.id, ...body.photo_urls],
+      );
+    }
+
+    const d = body.details ?? {};
+    if (body.category === ListingCategory.BUY_SELL) {
+      await pool.query(
+        `INSERT INTO buy_sell_details (listing_id, subcategory, brand, model, year, condition, price_type, extra_details)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [listing.id, d.subcategory ?? null, d.brand ?? null, d.model ?? null,
+          d.year ?? null, d.condition ?? null, d.price_type ?? 'fixed', d.extra_details ?? {}],
+      );
+    } else if (body.category === ListingCategory.RENT) {
+      await pool.query(
+        `INSERT INTO rent_details (listing_id, property_type, bedrooms, furnishing, deposit_amount, amenities, available_from, preferred_tenant)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [listing.id, d.property_type ?? null, d.bedrooms ?? null, d.furnishing ?? null,
+          d.deposit_amount ?? null, d.amenities ?? [], d.available_from ?? null, d.preferred_tenant ?? 'any'],
+      );
+    } else if (body.category === ListingCategory.SERVICES) {
+      await pool.query(
+        `INSERT INTO service_details (listing_id, service_type, experience_years, availability, area_coverage, price_type)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [listing.id, d.service_type ?? null, d.experience_years ?? null,
+          d.availability ?? null, d.area_coverage ?? null, d.price_type ?? null],
+      );
+    } else if (body.category === ListingCategory.JOBS) {
+      await pool.query(
+        `INSERT INTO job_details (listing_id, company_name, job_type, experience_level, salary_min, salary_max, salary_type, is_urgent, openings, skills_required, gender_preference)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [listing.id, d.company_name ?? null, d.job_type ?? null, d.experience_level ?? null,
+          d.salary_min ?? null, d.salary_max ?? null, d.salary_type ?? 'monthly',
+          d.is_urgent ?? false, d.openings ?? 1, d.skills_required ?? [], d.gender_preference ?? 'any'],
+      );
+    } else if (body.category === ListingCategory.BUSINESSES) {
+      await pool.query(
+        `INSERT INTO business_listing_details (listing_id, business_name, business_category, address, working_hours, website, amenities, established_year)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [listing.id, d.business_name ?? body.title, d.business_category ?? null,
+          d.address ?? null, d.working_hours ?? {}, d.website ?? null,
+          d.amenities ?? [], d.established_year ?? null],
       );
     }
 
@@ -138,6 +182,32 @@ router.delete(
       throw new ApiError(403, 'Not allowed to delete this listing');
     }
     await pool.query('UPDATE listings SET is_deleted = true WHERE id = $1', [id]);
+    res.json({ ok: true });
+  }),
+);
+
+router.post(
+  '/listings/:id/save',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    await pool.query(
+      `INSERT INTO saved_listings (user_id, listing_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [req.auth!.userId, id],
+    );
+    res.status(201).json({ ok: true });
+  }),
+);
+
+router.delete(
+  '/listings/:id/save',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    await pool.query(
+      'DELETE FROM saved_listings WHERE user_id = $1 AND listing_id = $2',
+      [req.auth!.userId, id],
+    );
     res.json({ ok: true });
   }),
 );

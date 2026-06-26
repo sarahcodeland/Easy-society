@@ -19,7 +19,7 @@ export type QaStackParamList = {
 export type MarketplaceStackParamList = {
   MarketplaceHome: undefined;
   ListingDetail: { listingId: string };
-  CreateListing: undefined;
+  CreateListing: { category: string };
   BusinessDirectory: undefined;
   BusinessDetail: { businessId: string };
   CreateBusiness: undefined;
