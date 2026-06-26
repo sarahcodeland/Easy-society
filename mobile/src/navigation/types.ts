@@ -1,5 +1,7 @@
 export type AuthStackParamList = {
+  ChooseLanguage: { next?: 'Login' | 'SignUp' };
   Login: undefined;
+  SignUp: undefined;
   ProfileSetup: undefined;
 };
 
@@ -29,6 +31,11 @@ export type MoreStackParamList = {
   Schemes: undefined;
   Notifications: undefined;
   ComingSoon: { featureTitle: string };
+};
+
+export type StatusStackParamList = {
+  StatusFeed: undefined;
+  CreateStatus: undefined;
 };
 
 export type MainTabParamList = {

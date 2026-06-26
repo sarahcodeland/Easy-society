@@ -7,7 +7,7 @@ import { createPresignedUpload } from '../../services/storage/storageService';
 const router = Router();
 
 const presignSchema = z.object({
-  prefix: z.enum(['chat', 'status', 'listing', 'business', 'profile']),
+  prefix: z.enum(['chat', 'status', 'listing', 'business', 'profile', 'qa']),
   content_type: z.string().regex(/^(image|video|audio)\/[a-zA-Z0-9.+-]+$/),
 });
 

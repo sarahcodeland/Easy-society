@@ -16,6 +16,12 @@ const credentialsSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
+const registerSchema = credentialsSchema.extend({
+  name: z.string().min(1).max(120),
+  location_id: z.string().uuid(),
+  preferred_language: z.string().min(2).max(5).optional(),
+});
+
 const profileSchema = z.object({
   name: z.string().min(1).max(120),
   profile_photo_url: z.string().url().nullable().optional(),
@@ -37,25 +43,41 @@ router.post(
   '/register',
   authRateLimit,
   asyncHandler(async (req, res) => {
-    const { email, password } = credentialsSchema.parse(req.body);
+    const { email, password, name, location_id, preferred_language } = registerSchema.parse(req.body);
 
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
       throw new ApiError(409, 'An account with this email already exists');
     }
 
+    const loc = await pool.query('SELECT type FROM locations WHERE id = $1', [location_id]);
+    if (loc.rows.length === 0 || loc.rows[0].type !== 'area') {
+      throw new ApiError(400, 'location_id must reference a location of type "area"');
+    }
+
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     const { rows } = await pool.query(
-      `INSERT INTO users (email, password_hash, name)
-       VALUES ($1, $2, $3)
+      `INSERT INTO users (email, password_hash, name, location_id, preferred_language)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING ${USER_FIELDS}`,
-      [email, passwordHash, 'New User'],
+      [email, passwordHash, name, location_id, preferred_language ?? null],
     );
 
     const user = rows[0];
+
+    // Auto-join the area's chat group on signup
+    const group = await pool.query('SELECT id FROM chat_groups WHERE location_id = $1', [location_id]);
+    if (group.rows[0]) {
+      await pool.query(
+        `INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2)
+         ON CONFLICT (group_id, user_id) DO NOTHING`,
+        [group.rows[0].id, user.id],
+      );
+    }
+
     const token = signAuthToken({ userId: user.id, role: user.role });
-    res.status(201).json({ token, user, needs_profile: true });
+    res.status(201).json({ token, user, needs_profile: false });
   }),
 );
 

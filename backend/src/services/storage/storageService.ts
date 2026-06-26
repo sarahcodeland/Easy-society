@@ -7,7 +7,7 @@ import { env } from '../../config/env';
 // to that URL; reads go through Supabase Storage's public URL for the bucket.
 const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey);
 
-const ALLOWED_PREFIXES = ['chat', 'status', 'listing', 'business', 'profile'] as const;
+const ALLOWED_PREFIXES = ['chat', 'status', 'listing', 'business', 'profile', 'qa'] as const;
 type AllowedPrefix = (typeof ALLOWED_PREFIXES)[number];
 
 export interface PresignedUpload {

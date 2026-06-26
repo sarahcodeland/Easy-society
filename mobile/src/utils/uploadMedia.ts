@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { apiClient } from '../api/client';
 
-export type UploadPrefix = 'chat' | 'status' | 'listing' | 'business' | 'profile';
+export type UploadPrefix = 'chat' | 'status' | 'listing' | 'business' | 'profile' | 'qa';
 
 // Picks one image and uploads it directly to Supabase Storage via a
 // presigned URL — the file bytes never pass through the EasySociety API,

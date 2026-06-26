@@ -136,4 +136,4 @@ export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 export const MIN_ACCOUNT_AGE_DAYS_FOR_ANNOUNCEMENTS = 7;
 
 // Stories/status auto-expiry window.
-export const STATUS_EXPIRY_HOURS = 24;
+export const STATUS_EXPIRY_HOURS = 48;
