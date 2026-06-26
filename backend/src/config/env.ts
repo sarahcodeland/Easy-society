@@ -20,18 +20,10 @@ export const env = {
   jwtSecret: required('JWT_SECRET', 'dev-secret-change-me'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '30d',
 
-  otpProvider: (process.env.OTP_PROVIDER ?? 'mock') as 'mock' | 'msg91' | '2factor',
-  msg91ApiKey: process.env.MSG91_API_KEY ?? '',
-  msg91TemplateId: process.env.MSG91_TEMPLATE_ID ?? '',
-  twoFactorApiKey: process.env.TWOFACTOR_API_KEY ?? '',
-
-  storageProvider: (process.env.STORAGE_PROVIDER ?? 's3') as 's3' | 'r2',
-  s3Bucket: process.env.S3_BUCKET ?? 'easysociety-media',
-  s3Region: process.env.S3_REGION ?? 'ap-south-1',
-  s3AccessKeyId: process.env.S3_ACCESS_KEY_ID ?? '',
-  s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? '',
-  r2Endpoint: process.env.R2_ENDPOINT ?? '',
-  cdnBaseUrl: process.env.CDN_BASE_URL ?? '',
+  storageProvider: (process.env.STORAGE_PROVIDER ?? 'supabase') as 'supabase',
+  supabaseUrl: process.env.SUPABASE_URL ?? '',
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+  supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'easysociety-media',
 
   fcmProjectId: process.env.FCM_PROJECT_ID ?? '',
   fcmClientEmail: process.env.FCM_CLIENT_EMAIL ?? '',

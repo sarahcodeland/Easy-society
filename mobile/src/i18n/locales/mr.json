@@ -8,17 +8,20 @@
     "comingSoon": "लवकरच येत आहे"
   },
   "auth": {
-    "enterPhone": "तुमचा मोबाईल नंबर टाका",
-    "sendOtp": "OTP पाठवा",
-    "enterOtp": "तुमच्या फोनवर पाठवलेला OTP टाका",
-    "verify": "सत्यापित करा",
     "yourName": "तुमचे नाव",
     "selectState": "तुमचे राज्य निवडा",
     "selectDistrict": "तुमचा जिल्हा निवडा",
     "selectCity": "तुमचे शहर/गाव निवडा",
     "selectMandal": "तुमचा मंडळ निवडा",
     "selectArea": "तुमचे क्षेत्र निवडा",
-    "finishSetup": "सेटअप पूर्ण करा"
+    "finishSetup": "सेटअप पूर्ण करा",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "login": "Sign in",
+    "register": "Create account",
+    "switchToRegister": "Don't have an account? Sign up",
+    "switchToLogin": "Already have an account? Sign in"
   },
   "nav": {
     "chat": "चॅट",

@@ -1,4 +1,16 @@
 {
-  "name": "EasySociety",
-  "displayName": "EasySociety"
+  "expo": {
+    "name": "EasySociety",
+    "slug": "easysociety",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.easysociety.app"
+    }
+  }
 }

@@ -3,6 +3,9 @@ import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } fr
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ChatStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
+import Avatar from '../../components/Avatar';
+import Badge from '../../components/Badge';
+import { colors, spacing } from '../../theme';
 
 interface ChatGroupRow {
   id: string;
@@ -29,6 +32,7 @@ export default function ChatListScreen({ navigation }: Props) {
 
   return (
     <FlatList
+      style={styles.flex}
       data={groups}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
@@ -38,8 +42,11 @@ export default function ChatListScreen({ navigation }: Props) {
           style={styles.row}
           onPress={() => navigation.navigate('ChatRoom', { groupId: item.id, groupName: item.name })}
         >
-          <Text style={styles.groupName}>{item.name}</Text>
-          {item.is_moderator && <Text style={styles.modBadge}>Moderator</Text>}
+          <Avatar name={item.name} size={44} />
+          <View style={styles.rowInfo}>
+            <Text style={styles.groupName}>{item.name}</Text>
+          </View>
+          {item.is_moderator && <Badge label="Moderator" />}
         </TouchableOpacity>
       )}
     />
@@ -47,8 +54,9 @@ export default function ChatListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee', flexDirection: 'row', justifyContent: 'space-between' },
-  groupName: { fontSize: 16 },
-  modBadge: { fontSize: 12, color: '#2E7D32', fontWeight: '600' },
-  empty: { padding: 24, textAlign: 'center', color: '#777' },
+  flex: { backgroundColor: colors.background },
+  row: { padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card },
+  rowInfo: { flex: 1, marginLeft: spacing.md },
+  groupName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  empty: { padding: 24, textAlign: 'center', color: colors.textSecondary },
 });

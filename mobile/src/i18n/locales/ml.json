@@ -8,17 +8,20 @@
     "comingSoon": "ഉടൻ വരുന്നു"
   },
   "auth": {
-    "enterPhone": "നിങ്ങളുടെ മൊബൈൽ നമ്പർ നൽകുക",
-    "sendOtp": "OTP അയയ്ക്കുക",
-    "enterOtp": "നിങ്ങളുടെ ഫോണിലേക്ക് അയച്ച OTP നൽകുക",
-    "verify": "സ്ഥിരീകരിക്കുക",
     "yourName": "നിങ്ങളുടെ പേര്",
     "selectState": "നിങ്ങളുടെ സംസ്ഥാനം തിരഞ്ഞെടുക്കുക",
     "selectDistrict": "നിങ്ങളുടെ ജില്ല തിരഞ്ഞെടുക്കുക",
     "selectCity": "നിങ്ങളുടെ നഗരം/ഗ്രാമം തിരഞ്ഞെടുക്കുക",
     "selectMandal": "നിങ്ങളുടെ മണ്ഡലം തിരഞ്ഞെടുക്കുക",
     "selectArea": "നിങ്ങളുടെ പ്രദേശം തിരഞ്ഞെടുക്കുക",
-    "finishSetup": "സജ്ജീകരണം പൂർത്തിയാക്കുക"
+    "finishSetup": "സജ്ജീകരണം പൂർത്തിയാക്കുക",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "login": "Sign in",
+    "register": "Create account",
+    "switchToRegister": "Don't have an account? Sign up",
+    "switchToLogin": "Already have an account? Sign in"
   },
   "nav": {
     "chat": "ചാറ്റ്",

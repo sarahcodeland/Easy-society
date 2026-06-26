@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { apiClient } from '../../api/client';
+import Avatar from '../../components/Avatar';
+import { colors, spacing } from '../../theme';
 
 interface StatusRow {
   id: string;
@@ -45,21 +47,27 @@ export default function StatusFeedScreen() {
         horizontal
         data={statuses}
         keyExtractor={(item) => item.id}
+        showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tray}
         ListHeaderComponent={
           <TouchableOpacity style={styles.addTile} onPress={createTextStatus}>
-            <Text style={styles.addTileText}>+</Text>
+            <View style={styles.addCircle}>
+              <Text style={styles.addTileText}>+</Text>
+            </View>
+            <Text style={styles.tileAuthor} numberOfLines={1}>Your Status</Text>
           </TouchableOpacity>
         }
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.tile} onPress={() => openStatus(item)}>
-            {item.media_type === 'photo' && item.content_url ? (
-              <Image source={{ uri: item.content_url }} style={styles.tileImage} />
-            ) : (
-              <View style={styles.textTile}>
-                <Text numberOfLines={3} style={styles.textTileText}>{item.text_content}</Text>
+            <View style={styles.ring}>
+              <View style={styles.ringInner}>
+                {item.media_type === 'photo' && item.content_url ? (
+                  <Image source={{ uri: item.content_url }} style={styles.tileImage} />
+                ) : (
+                  <Avatar name={item.author_name ?? '?'} size={54} />
+                )}
               </View>
-            )}
+            </View>
             <Text style={styles.tileAuthor} numberOfLines={1}>{item.author_name}</Text>
           </TouchableOpacity>
         )}
@@ -79,15 +87,16 @@ export default function StatusFeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  tray: { padding: 10 },
-  addTile: { width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: '#2E7D32', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  addTileText: { fontSize: 28, color: '#2E7D32' },
-  tile: { width: 70, marginRight: 10, alignItems: 'center' },
-  tileImage: { width: 70, height: 70, borderRadius: 35 },
-  textTile: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#2E7D32', alignItems: 'center', justifyContent: 'center', padding: 4 },
-  textTileText: { color: '#fff', fontSize: 10, textAlign: 'center' },
-  tileAuthor: { fontSize: 10, marginTop: 4 },
+  flex: { flex: 1, backgroundColor: colors.background },
+  tray: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.md },
+  addTile: { width: 64, marginRight: spacing.md, alignItems: 'center' },
+  addCircle: { width: 58, height: 58, borderRadius: 29, borderWidth: 2, borderColor: '#CFC4B8', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
+  addTileText: { fontSize: 24, color: colors.textMuted },
+  tile: { width: 64, marginRight: spacing.md, alignItems: 'center' },
+  ring: { width: 58, height: 58, borderRadius: 29, padding: 2.5, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  ringInner: { width: '100%', height: '100%', borderRadius: 27, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  tileImage: { width: '100%', height: '100%' },
+  tileAuthor: { fontSize: 10.5, marginTop: 5, color: colors.textSecondary, fontWeight: '600' },
   viewer: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
   viewerImage: { width: '100%', height: '100%' },
   viewerText: { color: '#fff', fontSize: 22, padding: 24, textAlign: 'center' },

@@ -8,10 +8,13 @@
     "comingSoon": "Coming soon"
   },
   "auth": {
-    "enterPhone": "Enter your mobile number",
-    "sendOtp": "Send OTP",
-    "enterOtp": "Enter the OTP sent to your phone",
-    "verify": "Verify",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "login": "Sign in",
+    "register": "Create account",
+    "switchToRegister": "Don't have an account? Sign up",
+    "switchToLogin": "Already have an account? Sign in",
     "yourName": "Your name",
     "selectState": "Select your state",
     "selectDistrict": "Select your district",

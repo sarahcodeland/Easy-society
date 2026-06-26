@@ -1,20 +1,11 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { env } from '../../config/env';
 
-// Single S3-compatible client works for both AWS S3 and Cloudflare R2 — R2
-// just needs a custom endpoint and path-style addressing. Media is never
-// proxied through the Node API: clients upload directly to this presigned
-// URL, and reads go through the Cloudflare CDN in front of the bucket.
-const s3 = new S3Client({
-  region: env.s3Region,
-  endpoint: env.storageProvider === 'r2' ? env.r2Endpoint : undefined,
-  forcePathStyle: env.storageProvider === 'r2',
-  credentials: env.s3AccessKeyId
-    ? { accessKeyId: env.s3AccessKeyId, secretAccessKey: env.s3SecretAccessKey }
-    : undefined,
-});
+// Service-role client: only the backend holds this key, so it can mint
+// signed upload URLs scoped to a single object path. Clients upload directly
+// to that URL; reads go through Supabase Storage's public URL for the bucket.
+const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey);
 
 const ALLOWED_PREFIXES = ['chat', 'status', 'listing', 'business', 'profile'] as const;
 type AllowedPrefix = (typeof ALLOWED_PREFIXES)[number];
@@ -36,16 +27,20 @@ export async function createPresignedUpload(
   const ext = contentType.split('/')[1] ?? 'bin';
   const objectKey = `${prefix}/${userId}/${randomUUID()}.${ext}`;
 
-  const command = new PutObjectCommand({
-    Bucket: env.s3Bucket,
-    Key: objectKey,
-    ContentType: contentType,
-  });
-  const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
+  const { data, error } = await supabase.storage
+    .from(env.supabaseStorageBucket)
+    .createSignedUploadUrl(objectKey);
+  if (error) {
+    throw new Error(`Failed to create signed upload URL: ${error.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(env.supabaseStorageBucket)
+    .getPublicUrl(objectKey);
 
   return {
-    uploadUrl,
+    uploadUrl: data.signedUrl,
     objectKey,
-    publicUrl: `${env.cdnBaseUrl}/${objectKey}`,
+    publicUrl: publicUrlData.publicUrl,
   };
 }

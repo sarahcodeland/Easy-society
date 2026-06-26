@@ -8,17 +8,20 @@
     "comingSoon": "ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ"
   },
   "auth": {
-    "enterPhone": "ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
-    "sendOtp": "OTP ಕಳುಹಿಸಿ",
-    "enterOtp": "ನಿಮ್ಮ ಫೋನ್‌ಗೆ ಕಳುಹಿಸಿದ OTP ನಮೂದಿಸಿ",
-    "verify": "ಪರಿಶೀಲಿಸಿ",
     "yourName": "ನಿಮ್ಮ ಹೆಸರು",
     "selectState": "ನಿಮ್ಮ ರಾಜ್ಯವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
     "selectDistrict": "ನಿಮ್ಮ ಜಿಲ್ಲೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
     "selectCity": "ನಿಮ್ಮ ನಗರ/ಗ್ರಾಮವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
     "selectMandal": "ನಿಮ್ಮ ಮಂಡಲವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
     "selectArea": "ನಿಮ್ಮ ಪ್ರದೇಶವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
-    "finishSetup": "ಸೆಟಪ್ ಮುಗಿಸಿ"
+    "finishSetup": "ಸೆಟಪ್ ಮುಗಿಸಿ",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "login": "Sign in",
+    "register": "Create account",
+    "switchToRegister": "Don't have an account? Sign up",
+    "switchToLogin": "Already have an account? Sign in"
   },
   "nav": {
     "chat": "ಚಾಟ್",

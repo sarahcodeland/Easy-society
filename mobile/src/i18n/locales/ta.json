@@ -8,17 +8,20 @@
     "comingSoon": "விரைவில் வரும்"
   },
   "auth": {
-    "enterPhone": "உங்கள் மொபைல் எண்ணை உள்ளிடவும்",
-    "sendOtp": "OTP அனுப்பு",
-    "enterOtp": "உங்கள் தொலைபேசிக்கு அனுப்பப்பட்ட OTP-ஐ உள்ளிடவும்",
-    "verify": "சரிபார்க்கவும்",
     "yourName": "உங்கள் பெயர்",
     "selectState": "உங்கள் மாநிலத்தைத் தேர்ந்தெடுக்கவும்",
     "selectDistrict": "உங்கள் மாவட்டத்தைத் தேர்ந்தெடுக்கவும்",
     "selectCity": "உங்கள் நகரம்/கிராமத்தைத் தேர்ந்தெடுக்கவும்",
     "selectMandal": "உங்கள் மண்டலத்தைத் தேர்ந்தெடுக்கவும்",
     "selectArea": "உங்கள் பகுதியைத் தேர்ந்தெடுக்கவும்",
-    "finishSetup": "அமைப்பை முடிக்கவும்"
+    "finishSetup": "அமைப்பை முடிக்கவும்",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "login": "Sign in",
+    "register": "Create account",
+    "switchToRegister": "Don't have an account? Sign up",
+    "switchToLogin": "Already have an account? Sign in"
   },
   "nav": {
     "chat": "அரட்டை",

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { VISIBILITY_LEVEL_ORDER, VisibilityLevel } from '@easysociety/shared';
+import { colors, radii } from '../theme';
 
 const LABELS: Record<VisibilityLevel, string> = {
   [VisibilityLevel.AREA]: 'My Area',
@@ -34,9 +35,9 @@ export default function VisibilityFilterBar({ value, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexGrow: 0, paddingVertical: 8, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  chip: { borderWidth: 1, borderColor: '#ccc', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 },
-  chipActive: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
-  chipText: { fontSize: 13, color: '#333' },
-  chipTextActive: { color: '#fff' },
+  row: { flexGrow: 0, paddingVertical: 8, paddingHorizontal: 10, backgroundColor: colors.background },
+  chip: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8, backgroundColor: colors.card },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+  chipTextActive: { color: colors.card },
 });

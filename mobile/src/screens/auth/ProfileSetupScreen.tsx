@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Location } from '@easysociety/shared';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import LocationCascadePicker from './LocationCascadePicker';
+import PrimaryButton from '../../components/PrimaryButton';
+import { colors, radii, spacing } from '../../theme';
 
 export default function ProfileSetupScreen() {
   const { t, i18n } = useTranslation();
@@ -41,8 +43,13 @@ export default function ProfileSetupScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.titleHeading}>Create Account</Text>
+      <Text style={styles.subHeading}>Start your community journey today.</Text>
+
       <Text style={styles.label}>{t('auth.yourName')}</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Full name" />
+      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Full name" placeholderTextColor={colors.textMuted} />
+
+      <Text style={styles.sectionLabel}>📍 LOCATION DETAILS</Text>
 
       <LocationCascadePicker
         label={t('auth.selectState')}
@@ -79,17 +86,19 @@ export default function ProfileSetupScreen() {
         onChange={setArea}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleFinish} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t('auth.finishSetup')}</Text>}
-      </TouchableOpacity>
+      <View style={styles.submitButton}>
+        <PrimaryButton title={t('auth.finishSetup')} onPress={handleFinish} loading={loading} />
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24 },
-  label: { fontSize: 14, color: '#555', marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16 },
-  button: { backgroundColor: '#2E7D32', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 8, marginBottom: 40 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  container: { padding: spacing.xl, backgroundColor: colors.background },
+  titleHeading: { fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginBottom: 2 },
+  subHeading: { fontSize: 12.5, color: colors.textSecondary, marginBottom: spacing.lg },
+  label: { fontSize: 12, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xs },
+  sectionLabel: { fontSize: 11.5, fontWeight: '800', color: colors.primary, marginVertical: spacing.md, letterSpacing: 0.5 },
+  input: { borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.card, borderRadius: radii.input, padding: 12, fontSize: 14, color: colors.textPrimary, marginBottom: spacing.lg },
+  submitButton: { marginTop: spacing.sm, marginBottom: 40 },
 });
