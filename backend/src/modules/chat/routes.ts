@@ -93,6 +93,33 @@ router.post(
   }),
 );
 
+// Share any content type (status/listing/question/answer) into a chat group.
+// Creates a chat_shares record; the client renders it as a rich preview card
+// inside the chat thread.
+router.post(
+  '/shares',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const shareSchema = z.object({
+      group_id:    z.string().uuid(),
+      target_type: z.enum(['status', 'listing', 'question', 'answer']),
+      target_id:   z.string().uuid(),
+      message:     z.string().max(500).optional(),
+    });
+    const body = shareSchema.parse(req.body);
+
+    await assertMember(body.group_id, req.auth!.userId);
+
+    const { rows } = await pool.query(
+      `INSERT INTO chat_shares (sender_id, group_id, target_type, target_id, message)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, sender_id, group_id, target_type, target_id, message, created_at`,
+      [req.auth!.userId, body.group_id, body.target_type, body.target_id, body.message ?? null],
+    );
+    res.status(201).json({ share: rows[0] });
+  }),
+);
+
 // Moderator-only: soft-delete a message (removes content, keeps row for audit).
 router.delete(
   '/messages/:messageId',

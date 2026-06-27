@@ -50,8 +50,10 @@ router.get(
               s.expires_at, s.created_at,
               u.name AS author_name, u.profile_photo_url AS author_photo,
               l.name AS location_label,
-              COALESCE(lk.count, 0) AS like_count,
-              COALESCE(v.count, 0) AS view_count
+              COALESCE(lk.count, 0)  AS like_count,
+              COALESCE(v.count, 0)   AS view_count,
+              COALESCE(cm.count, 0)  AS comment_count,
+              COALESCE(rp.count, 0)  AS repost_count
        FROM statuses s
        JOIN users u ON u.id = s.user_id
        LEFT JOIN locations l ON l.id = u.location_id
@@ -61,6 +63,13 @@ router.get(
        LEFT JOIN (
          SELECT status_id, COUNT(*) AS count FROM status_views GROUP BY status_id
        ) v ON v.status_id = s.id
+       LEFT JOIN (
+         SELECT status_id, COUNT(*) AS count
+         FROM status_comments WHERE is_deleted = false GROUP BY status_id
+       ) cm ON cm.status_id = s.id
+       LEFT JOIN (
+         SELECT status_id, COUNT(*) AS count FROM status_reposts GROUP BY status_id
+       ) rp ON rp.status_id = s.id
        WHERE s.location_id = $1
          AND s.is_deleted = false
          AND s.expires_at > now()
@@ -134,6 +143,98 @@ router.delete(
     res.json({ ok: true });
   }),
 );
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+
+router.post(
+  '/:id/comments',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    const body = z.string().min(1).max(2000).parse(req.body.body);
+    const parentCommentId = req.body.parent_comment_id
+      ? z.string().uuid().parse(req.body.parent_comment_id)
+      : null;
+
+    const { rows } = await pool.query(
+      `INSERT INTO status_comments (status_id, user_id, parent_comment_id, body)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, status_id, user_id, parent_comment_id, body, created_at`,
+      [statusId, req.auth!.userId, parentCommentId, body],
+    );
+    res.status(201).json({ comment: rows[0] });
+  }),
+);
+
+router.get(
+  '/:id/comments',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    const { rows } = await pool.query(
+      `SELECT c.id, c.status_id, c.user_id, c.parent_comment_id, c.body, c.created_at,
+              u.name AS author_name, u.profile_photo_url AS author_photo
+       FROM status_comments c
+       LEFT JOIN users u ON u.id = c.user_id
+       WHERE c.status_id = $1 AND c.is_deleted = false
+       ORDER BY c.created_at ASC`,
+      [statusId],
+    );
+    res.json({ comments: rows });
+  }),
+);
+
+// ── Reposts ───────────────────────────────────────────────────────────────────
+
+router.post(
+  '/:id/reposts',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    const caption = req.body.caption
+      ? z.string().max(500).parse(req.body.caption)
+      : null;
+
+    await pool.query(
+      `INSERT INTO status_reposts (status_id, user_id, caption)
+       VALUES ($1, $2, $3) ON CONFLICT (user_id, status_id) DO NOTHING`,
+      [statusId, req.auth!.userId, caption],
+    );
+    res.status(201).json({ ok: true });
+  }),
+);
+
+router.delete(
+  '/:id/reposts',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    await pool.query(
+      'DELETE FROM status_reposts WHERE status_id = $1 AND user_id = $2',
+      [statusId, req.auth!.userId],
+    );
+    res.json({ ok: true });
+  }),
+);
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+
+router.post(
+  '/:id/reports',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    const reason = z.string().min(1).max(1000).parse(req.body.reason);
+    await pool.query(
+      `INSERT INTO status_reports (status_id, reporter_id, reason)
+       VALUES ($1, $2, $3) ON CONFLICT (reporter_id, status_id) DO NOTHING`,
+      [statusId, req.auth!.userId, reason],
+    );
+    res.status(201).json({ ok: true });
+  }),
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 router.delete(
   '/:id',

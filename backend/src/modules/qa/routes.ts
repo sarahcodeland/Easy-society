@@ -157,6 +157,46 @@ router.delete(
   }),
 );
 
+// ── Answer comments ───────────────────────────────────────────────────────────
+
+router.post(
+  '/answers/:id/comments',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const answerId = z.string().uuid().parse(req.params.id);
+    const body = z.string().min(1).max(2000).parse(req.body.body);
+    const parentCommentId = req.body.parent_comment_id
+      ? z.string().uuid().parse(req.body.parent_comment_id)
+      : null;
+
+    const { rows } = await pool.query(
+      `INSERT INTO qa_comments (answer_id, user_id, parent_comment_id, body)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, answer_id, user_id, parent_comment_id, body, created_at`,
+      [answerId, req.auth!.userId, parentCommentId, body],
+    );
+    res.status(201).json({ comment: rows[0] });
+  }),
+);
+
+router.get(
+  '/answers/:id/comments',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const answerId = z.string().uuid().parse(req.params.id);
+    const { rows } = await pool.query(
+      `SELECT c.id, c.answer_id, c.user_id, c.parent_comment_id, c.body, c.created_at,
+              u.name AS author_name, u.profile_photo_url AS author_photo
+       FROM qa_comments c
+       LEFT JOIN users u ON u.id = c.user_id
+       WHERE c.answer_id = $1 AND c.is_deleted = false
+       ORDER BY c.created_at ASC`,
+      [answerId],
+    );
+    res.json({ comments: rows });
+  }),
+);
+
 router.delete(
   '/answers/:id',
   requireAuth,
