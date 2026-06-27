@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+// TODO: restore for production
+// import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
+
+// TODO: restore for production
+// const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+const MOCK_ADDRESS = 'KPHB Colony, Kukatpally, Hyderabad, Telangana 500072';
 
 type Props = NativeStackScreenProps<MarketplaceStackParamList, 'CreateBusiness'>;
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -11,7 +17,7 @@ export default function CreateBusinessScreen({ navigation }: Props) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState(MOCK_ADDRESS);
   const [contactNumber, setContactNumber] = useState('');
   const [hours, setHours] = useState<Record<string, { open: string; close: string; closed: boolean }>>(
     Object.fromEntries(DAYS.map((d) => [d, { open: '09:00', close: '18:00', closed: false }])),
@@ -34,7 +40,7 @@ export default function CreateBusinessScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.label}>Business name</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} />
       <Text style={styles.label}>Category</Text>
@@ -42,7 +48,28 @@ export default function CreateBusinessScreen({ navigation }: Props) {
       <Text style={styles.label}>Description</Text>
       <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} multiline />
       <Text style={styles.label}>Address</Text>
+      {/* TODO: swap for GooglePlacesAutocomplete before production */}
       <TextInput style={styles.input} value={address} onChangeText={setAddress} />
+      {/* --- Real implementation (restore before production) ---
+      <View style={styles.addressWrapper}>
+        <GooglePlacesAutocomplete
+          placeholder="Search business address…"
+          onPress={(data) => setAddress(data.description)}
+          query={{ key: GOOGLE_API_KEY, language: 'en', components: 'country:in' }}
+          fetchDetails={false}
+          enablePoweredByContainer={false}
+          keepResultsAfterBlur={false}
+          textInputProps={{ onChangeText: setAddress }}
+          styles={{
+            container: { flex: 0, zIndex: 10 },
+            textInput: styles.input,
+            listView: styles.addressList,
+            row: { paddingHorizontal: 12, paddingVertical: 10 },
+            description: { fontSize: 13 },
+          }}
+        />
+      </View>
+      */}
       <Text style={styles.label}>Contact number</Text>
       <TextInput style={styles.input} value={contactNumber} onChangeText={setContactNumber} keyboardType="phone-pad" />
 
@@ -75,6 +102,18 @@ const styles = StyleSheet.create({
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
   dayLabel: { width: 40, fontSize: 13 },
   dayHours: { fontSize: 13, color: '#555' },
+  addressWrapper: { zIndex: 10 },
+  addressList: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    marginTop: 2,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
   note: { fontSize: 12, color: '#777', marginTop: 16, fontStyle: 'italic' },
   button: { backgroundColor: '#2E7D32', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 20, marginBottom: 40 },
   buttonText: { color: '#fff', fontWeight: '600' },

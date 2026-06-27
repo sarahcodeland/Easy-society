@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { pool } from '../../db/pool';
 import { asyncHandler, ApiError } from '../../middleware/errorHandler';
 import { cached } from '../../utils/cache';
+import { geocodePlaceId } from '../../services/googleMaps';
 
 const router = Router();
 
@@ -40,6 +41,42 @@ router.get(
       type ? [`%${q}%`, type] : [`%${q}%`],
     );
     res.json({ locations: rows });
+  }),
+);
+
+// GET /locations/resolve-place?place_id=ChIJ... — resolves a Google place_id to the
+// app's location hierarchy by fuzzy-matching each level (state→district→city→mandal→area)
+// against the DB. Returns null for levels not found so the client can fallback to cascade.
+router.get(
+  '/resolve-place',
+  asyncHandler(async (req, res) => {
+    const placeId = z.string().min(1).parse(req.query.place_id);
+    const geo = await geocodePlaceId(placeId);
+
+    async function findByName(name: string | null, type: string, parentId?: string | null) {
+      if (!name) return null;
+      const params: unknown[] = [type, `%${name}%`];
+      let sql =
+        'SELECT id, name, type, parent_id, lat, lng FROM locations WHERE type = $1 AND name ILIKE $2';
+      if (parentId !== undefined) {
+        sql += ' AND ($3::uuid IS NULL OR parent_id = $3)';
+        params.push(parentId);
+      }
+      sql += ' LIMIT 1';
+      const { rows } = await pool.query(sql, params);
+      return rows[0] ?? null;
+    }
+
+    const state = await findByName(geo.state, 'state');
+    const district = await findByName(geo.district, 'district', state?.id ?? null);
+    const city = await findByName(geo.city, 'city', district?.id ?? null);
+    const mandal = await findByName(geo.mandal, 'mandal', city?.id ?? district?.id ?? null);
+    const area = await findByName(geo.area, 'area', mandal?.id ?? null);
+
+    res.json({
+      resolved: { state, district, city, mandal, area },
+      raw: geo,
+    });
   }),
 );
 

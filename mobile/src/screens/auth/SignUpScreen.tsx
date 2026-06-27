@@ -17,6 +17,7 @@ import { AuthStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import LocationCascadePicker from './LocationCascadePicker';
+import GoogleLocationPicker from '../../components/GoogleLocationPicker';
 import PrimaryButton from '../../components/PrimaryButton';
 import { colors, radii, spacing } from '../../theme';
 
@@ -144,6 +145,18 @@ export default function SignUpScreen({ navigation }: Props) {
         {/* ── Location ─────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>📍 LOCATION</Text>
 
+        <GoogleLocationPicker
+          onResolved={(h) => {
+            setState(h.state);
+            setDistrict(h.district);
+            setCity(h.city);
+            setMandal(h.mandal);
+            setArea(h.area);
+          }}
+        />
+
+        <Text style={styles.manualHint}>Or select manually:</Text>
+
         <LocationCascadePicker
           label={t('auth.selectState')}
           parentId={null}
@@ -233,4 +246,5 @@ const styles = StyleSheet.create({
   submitWrap: { marginTop: spacing.md },
   switchRow: { marginTop: spacing.md, alignItems: 'center', paddingBottom: 8 },
   switchText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  manualHint: { fontSize: 12, color: colors.textSecondary, marginBottom: spacing.sm, marginTop: 4 },
 });

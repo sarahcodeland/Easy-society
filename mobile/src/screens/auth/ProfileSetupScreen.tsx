@@ -5,6 +5,7 @@ import { Location } from '@easysociety/shared';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import LocationCascadePicker from './LocationCascadePicker';
+import GoogleLocationPicker from '../../components/GoogleLocationPicker';
 import PrimaryButton from '../../components/PrimaryButton';
 import { colors, radii, spacing } from '../../theme';
 
@@ -50,6 +51,18 @@ export default function ProfileSetupScreen() {
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Full name" placeholderTextColor={colors.textMuted} />
 
       <Text style={styles.sectionLabel}>📍 LOCATION DETAILS</Text>
+
+      <GoogleLocationPicker
+        onResolved={(h) => {
+          setState(h.state);
+          setDistrict(h.district);
+          setCity(h.city);
+          setMandal(h.mandal);
+          setArea(h.area);
+        }}
+      />
+
+      <Text style={styles.manualHint}>Or select manually:</Text>
 
       <LocationCascadePicker
         label={t('auth.selectState')}
@@ -101,4 +114,5 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 11.5, fontWeight: '800', color: colors.primary, marginVertical: spacing.md, letterSpacing: 0.5 },
   input: { borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.card, borderRadius: radii.input, padding: 12, fontSize: 14, color: colors.textPrimary, marginBottom: spacing.lg },
   submitButton: { marginTop: spacing.sm, marginBottom: 40 },
+  manualHint: { fontSize: 12, color: colors.textSecondary, marginBottom: spacing.sm, marginTop: 4 },
 });
