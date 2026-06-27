@@ -3,9 +3,9 @@ import {
   Animated,
   FlatList,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,13 +15,15 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { VisibilityLevel } from '@easysociety/shared';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QaStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
-import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import Avatar from '../../components/Avatar';
-import VisitorTag from '../../components/VisitorTag';
-import { colors, spacing } from '../../theme';
+import { colors } from '../../theme';
+
+const BRICK = '#8B2E2E';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface QuestionRow {
   id: string;
@@ -31,235 +33,229 @@ interface QuestionRow {
   vote_score: string;
   recommendation_count: string;
   answer_count: string;
-  is_visitor?: boolean;
-  visitor_location_label?: string | null;
+  is_resolved?: boolean;
   created_at?: string;
   media_urls?: string[];
 }
 
-function timeAgo(dateStr?: string): string {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
+type TabKey = 'recent' | 'trending';
+type Props  = NativeStackScreenProps<QaStackParamList, 'QuestionFeed'>;
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function timeAgo(d?: string) {
+  if (!d) return '';
+  const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// ── Q&A Card ────────────────────────────────────────────────────────────────
+// ── Question Card ─────────────────────────────────────────────────────────────
 
-interface CardProps {
+function QuestionCard({
+  item, isHelpful, onPress, onHelpful,
+}: {
   item: QuestionRow;
   isHelpful: boolean;
   onPress: () => void;
   onHelpful: () => void;
-}
+}) {
+  const scaleAnim    = useRef(new Animated.Value(1)).current;
+  const [viewing, setViewing] = useState(false);
+  const helpfulCount = Number(item.recommendation_count) + (isHelpful ? 1 : 0);
+  const hasImage     = (item.media_urls?.length ?? 0) > 0;
+  const imageUrl     = item.media_urls?.[0] ?? '';
 
-function QuestionCard({ item, isHelpful, onPress, onHelpful }: CardProps) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  function animateHelpful() {
+  function handleHelpful() {
     Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.92, duration: 80, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1.22, duration: 70, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1,    duration: 90, useNativeDriver: true }),
     ]).start();
     onHelpful();
   }
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-    >
-      {/* Header — avatar + meta + visitor badge */}
-      <View style={styles.cardHeader}>
-        <Avatar name={item.author_name ?? '?'} size={40} />
-        <View style={styles.metaBlock}>
-          <Text style={styles.authorName}>{item.author_name ?? 'Community Member'}</Text>
-          {item.created_at ? (
-            <Text style={styles.timeAgo}>{timeAgo(item.created_at)}</Text>
-          ) : null}
-        </View>
-        {item.is_visitor && (
-          <View style={styles.visitorBadge}>
-            <Text style={styles.visitorBadgeText}>VISITOR</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Content */}
-      <Text style={styles.questionTitle} numberOfLines={2}>{item.title}</Text>
-      {item.body ? (
-        <Text style={styles.questionSnippet} numberOfLines={3}>{item.body}</Text>
-      ) : null}
-      {item.is_visitor && item.visitor_location_label ? (
-        <VisitorTag isVisitor={item.is_visitor} visitorLocationLabel={item.visitor_location_label} />
-      ) : null}
-
-      {/* Media thumbnails */}
-      {item.media_urls && item.media_urls.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.mediaRow}
-          contentContainerStyle={styles.mediaRowContent}
-        >
-          {item.media_urls.map((url, i) => {
-            const isVideo = /\.(mp4|mov|avi|webm|m4v)$/i.test(url);
-            return (
-              <View key={i} style={styles.mediaTile}>
-                {isVideo ? (
-                  <View style={styles.videoTile}>
-                    <Ionicons name="videocam" size={20} color={colors.textSecondary} />
-                  </View>
-                ) : (
-                  <Image source={{ uri: url }} style={styles.mediaThumb} resizeMode="cover" />
-                )}
-                {isVideo && (
-                  <View style={styles.playBadge}>
-                    <Ionicons name="play" size={8} color="#fff" />
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {/* Footer toolbar */}
-      <View style={styles.toolbar}>
-        <View style={styles.answerCountRow}>
-          <Ionicons name="chatbubble-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.answerCountText}>
-            {item.answer_count} {Number(item.answer_count) === 1 ? 'answer' : 'answers'}
+    <>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [S.card, pressed && { opacity: 0.9 }]}
+      >
+        {/* Row 1 — user row */}
+        <View style={S.metaRow}>
+          <Avatar name={item.author_name ?? '?'} size={30} />
+          <Text style={S.authorName} numberOfLines={1}>
+            {item.author_name ?? 'Community Member'}
           </Text>
+          <View style={S.metaDot} />
+          <Text style={S.timeText}>{timeAgo(item.created_at)}</Text>
+          {item.is_resolved && (
+            <View style={S.solvedPill}>
+              <Text style={S.solvedText}>✓ Solved</Text>
+            </View>
+          )}
         </View>
 
-        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        {/* Row 2 — title */}
+        <Text style={S.titleText} numberOfLines={2}>{item.title}</Text>
+
+        {/* Row 3 — image (only if present, no placeholder) */}
+        {hasImage && (
           <TouchableOpacity
-            style={[styles.helpfulPill, isHelpful && styles.helpfulPillActive]}
-            onPress={animateHelpful}
-            activeOpacity={0.8}
+            style={S.imgWrap}
+            activeOpacity={0.92}
+            onPress={() => setViewing(true)}
           >
-            <Ionicons
-              name={isHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
-              size={13}
-              color={isHelpful ? colors.primary : colors.textSecondary}
-            />
-            <Text style={[styles.helpfulText, isHelpful && styles.helpfulTextActive]}>
-              Helpful {Number(item.recommendation_count) > 0 ? `(${item.recommendation_count})` : ''}
-            </Text>
+            <Image source={{ uri: imageUrl }} style={S.cardImg} resizeMode="cover" />
           </TouchableOpacity>
-        </Animated.View>
-      </View>
-    </Pressable>
-  );
-}
+        )}
 
-// ── Hero CTA ─────────────────────────────────────────────────────────────────
+        {/* Row 4 — body preview */}
+        {!!item.body && (
+          <Text style={S.previewText} numberOfLines={2}>{item.body}</Text>
+        )}
 
-function HeroCTA({ onPress }: { onPress: () => void }) {
-  return (
-    <View style={styles.heroCta}>
-      <Text style={styles.heroTitle}>Got a question for the neighbors?</Text>
-      <Text style={styles.heroSubtitle}>Join the conversation and get answers from your community.</Text>
-      <TouchableOpacity style={styles.heroBtn} onPress={onPress} activeOpacity={0.85}>
-        <Ionicons name="add-circle-outline" size={16} color="#fff" />
-        <Text style={styles.heroBtnText}>Ask a Question</Text>
-      </TouchableOpacity>
-    </View>
+        {/* Row 5 — bottom bar */}
+        <View style={S.bottomBar}>
+          <View style={S.answerRow}>
+            <Ionicons name="chatbubble-outline" size={13} color="#AAA" />
+            <Text style={S.answerText}>
+              {item.answer_count} {Number(item.answer_count) === 1 ? 'answer' : 'answers'}
+            </Text>
+          </View>
+
+          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <TouchableOpacity
+              style={[S.helpfulBtn, isHelpful && S.helpfulBtnActive]}
+              onPress={handleHelpful}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={isHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
+                size={13}
+                color={isHelpful ? '#fff' : '#666'}
+              />
+              <Text style={[S.helpfulText, isHelpful && S.helpfulTextActive]}>
+                Helpful{helpfulCount > 0 ? ` (${helpfulCount})` : ''}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Pressable>
+
+      {/* Fullscreen image viewer */}
+      <Modal
+        visible={viewing}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setViewing(false)}
+      >
+        <TouchableOpacity
+          style={S.viewer}
+          activeOpacity={1}
+          onPress={() => setViewing(false)}
+        >
+          <Image source={{ uri: imageUrl }} style={S.viewerImg} resizeMode="contain" />
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-type Props = NativeStackScreenProps<QaStackParamList, 'QuestionFeed'>;
-
 export default function QuestionFeedScreen({ navigation }: Props) {
-  const [questions, setQuestions] = useState<QuestionRow[]>([]);
-  const [visibility, setVisibility] = useState<VisibilityLevel>(VisibilityLevel.AREA);
+  const insets = useSafeAreaInsets();
+  const [questions, setQuestions]   = useState<QuestionRow[]>([]);
+  const [tab, setTab]               = useState<TabKey>('recent');
   const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState('');
-  const [helpful, setHelpful] = useState<Set<string>>(new Set());
+  const [search, setSearch]         = useState('');
+  const [helpful, setHelpful]       = useState<Set<string>>(new Set());
 
-  const load = useCallback(async (level: VisibilityLevel) => {
-    const { data } = await apiClient.get('/qa/questions', { params: { visibility: level } });
-    setQuestions(data.questions);
+  const load = useCallback(async (t: TabKey) => {
+    try {
+      const { data } = await apiClient.get('/qa/questions', {
+        params: { sort: t === 'trending' ? 'top' : 'recent' },
+      });
+      setQuestions(data.questions ?? []);
+    } catch {}
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    load(visibility);
-  }, [load, visibility]));
+  useFocusEffect(useCallback(() => { load(tab); }, [load, tab]));
 
   function toggleHelpful(id: string) {
-    setHelpful((prev) => {
+    setHelpful(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+    apiClient.post(`/qa/questions/${id}/recommend`).catch(() => {});
   }
 
   const filtered = search.trim()
-    ? questions.filter(
-        (q) =>
-          q.title.toLowerCase().includes(search.toLowerCase()) ||
-          q.body?.toLowerCase().includes(search.toLowerCase()),
+    ? questions.filter(q =>
+        q.title.toLowerCase().includes(search.toLowerCase()) ||
+        q.body?.toLowerCase().includes(search.toLowerCase())
       )
     : questions;
 
   return (
-    <View style={styles.flex}>
-      {/* Sticky search bar */}
-      <View style={styles.searchWrapper}>
-        <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
+    <View style={[S.screen, { paddingTop: insets.top }]}>
+
+      {/* ── Header: title + toggle ── */}
+      <View style={S.header}>
+        <Text style={S.headerTitle}>Q&A</Text>
+        <View style={S.toggleRow}>
+          {(['recent', 'trending'] as TabKey[]).map(t => (
+            <TouchableOpacity
+              key={t}
+              style={[S.toggleBtn, tab === t && S.toggleBtnActive]}
+              onPress={() => setTab(t)}
+              activeOpacity={0.8}
+            >
+              <Text style={[S.toggleText, tab === t && S.toggleTextActive]}>
+                {t === 'recent' ? 'Recent' : 'Trending'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* ── Search bar ── */}
+      <View style={S.searchWrap}>
+        <Ionicons name="search-outline" size={16} color="#BBB" />
         <TextInput
-          style={styles.searchInput}
+          style={S.searchInput}
           placeholder="Search questions…"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor="#C0C0C0"
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+            <Ionicons name="close-circle" size={16} color="#CCC" />
           </TouchableOpacity>
         )}
       </View>
 
+      {/* ── Feed ── */}
       <FlatList
         data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        keyExtractor={q => q.id}
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        contentContainerStyle={{ paddingTop: 6, paddingBottom: insets.bottom + 110 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={async () => {
               setRefreshing(true);
-              await load(visibility);
+              await load(tab);
               setRefreshing(false);
             }}
-            tintColor={colors.primary}
+            tintColor={BRICK}
           />
-        }
-        ListHeaderComponent={
-          <>
-            <VisibilityFilterBar value={visibility} onChange={(l) => { setVisibility(l); load(l); }} />
-            <View style={styles.heroPad}>
-              <HeroCTA onPress={() => navigation.navigate('AskQuestion')} />
-            </View>
-          </>
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={40} color={colors.border} />
-            <Text style={styles.emptyText}>
-              {search ? 'No questions match your search.' : 'No questions yet. Be the first to ask!'}
-            </Text>
-          </View>
         }
         renderItem={({ item }) => (
           <QuestionCard
@@ -269,221 +265,139 @@ export default function QuestionFeedScreen({ navigation }: Props) {
             onHelpful={() => toggleHelpful(item.id)}
           />
         )}
+        ListEmptyComponent={
+          <View style={S.empty}>
+            <Text style={S.emptyText}>
+              {search
+                ? 'No questions match your search.'
+                : 'No questions yet. Ask the first one!'}
+            </Text>
+          </View>
+        }
       />
+
+      {/* ── FAB ── */}
+      <TouchableOpacity
+        style={[S.fab, { bottom: insets.bottom + 90 }]}
+        onPress={() => navigation.navigate('AskQuestion')}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+
     </View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+const S = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
 
-  /* Search */
-  searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginVertical: spacing.sm,
-    backgroundColor: '#ffffff',
+  // ── Header
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10,
+  },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1A1A' },
+  toggleRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  toggleBtn:   { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 100 },
+  toggleBtnActive:  { backgroundColor: BRICK },
+  toggleText:       { fontSize: 12, fontWeight: '600', color: '#999' },
+  toggleTextActive: { color: '#fff' },
+
+  // ── Search
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginBottom: 8,
+    backgroundColor: '#fff', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#EBEBEB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+  },
+  searchInput: { flex: 1, fontSize: 13, color: '#1A1A1A', paddingVertical: 0 },
+
+  // ── Card
+  card: {
+    backgroundColor: '#fff',
     borderRadius: 16,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginHorizontal: 16,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.textPrimary,
-    paddingVertical: 0,
-  },
-
-  /* Hero CTA */
-  heroPad: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  heroCta: {
-    backgroundColor: '#FBF2EB',
-    borderRadius: 24,
-    padding: spacing.lg,
-  },
-  heroTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  heroSubtitle: {
-    fontSize: 12.5,
-    color: colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: spacing.md,
-  },
-  heroBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary,
-    borderRadius: 100,
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-  },
-  heroBtnText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  /* Feed */
-  listContent: { paddingBottom: 32 },
-  separator: { height: spacing.md },
-
-  /* Card */
-  card: {
-    marginHorizontal: spacing.lg,
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
-  cardPressed: {
-    backgroundColor: '#FBF2EB',
+
+  // Row 1 — user row
+  metaRow:    { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+  authorName: { fontSize: 12, fontWeight: '700', color: '#1A1A1A', flexShrink: 1 },
+  metaDot:    { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#CCC' },
+  timeText:   { fontSize: 11, color: '#999' },
+  solvedPill: {
+    marginLeft: 4,
+    backgroundColor: '#E8F5E9', borderRadius: 100,
+    paddingHorizontal: 7, paddingVertical: 2,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  metaBlock: { flex: 1 },
-  authorName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  timeAgo: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 1,
-  },
-  visitorBadge: {
-    backgroundColor: '#f1f1f1',
-    borderRadius: 100,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  visitorBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    letterSpacing: 0.5,
+  solvedText: { fontSize: 10, fontWeight: '700', color: '#2E7D32' },
+
+  // Row 2 — title
+  titleText: {
+    fontSize: 16, fontWeight: '800', color: '#1A1A1A',
+    lineHeight: 22, marginBottom: 6,
   },
 
-  /* Content */
-  questionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    lineHeight: 24,
+  // Row 3 — image
+  imgWrap: {
+    width: '100%', height: 180,
+    borderRadius: 12, overflow: 'hidden',
     marginBottom: 6,
   },
-  questionSnippet: {
-    fontSize: 13.5,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.sm,
+  cardImg: { width: '100%', height: '100%' },
+
+  // Row 4 — body preview
+  previewText: {
+    fontSize: 12, color: BRICK, lineHeight: 17,
+    marginBottom: 8,
   },
 
-  /* Media strip in card */
-  mediaRow: { marginBottom: spacing.sm },
-  mediaRowContent: { gap: spacing.sm },
-  mediaTile: {
-    width: 80,
-    height: 72,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
+  // Row 5 — bottom bar
+  bottomBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderTopWidth: 1, borderTopColor: '#F2F2F2', paddingTop: 8,
   },
-  mediaThumb: { width: '100%', height: '100%' },
-  videoTile: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
+  answerRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  answerText: { fontSize: 11, color: '#888' },
+  helpfulBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: '#E0E0E0',
+    borderRadius: 100, paddingVertical: 4, paddingHorizontal: 10,
   },
-  playBadge: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  helpfulBtnActive: { backgroundColor: BRICK, borderColor: BRICK },
+  helpfulText:      { fontSize: 11, fontWeight: '700', color: '#444' },
+  helpfulTextActive:{ color: '#fff' },
 
-  /* Toolbar */
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-  },
-  answerCountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  answerCountText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  helpfulPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 100,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  helpfulPillActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#FBF2EB',
-  },
-  helpfulText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  helpfulTextActive: {
-    color: colors.primary,
-  },
+  // ── Fullscreen viewer
+  viewer:    { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  viewerImg: { width: '100%', height: '100%' },
 
-  /* Empty */
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: 60,
-    gap: spacing.md,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: spacing.xl,
+  // ── Empty state
+  empty:     { paddingTop: 60, alignItems: 'center', paddingHorizontal: 32 },
+  emptyText: { fontSize: 14, color: '#999', textAlign: 'center', lineHeight: 20 },
+
+  // ── FAB
+  fab: {
+    position: 'absolute', right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: BRICK,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: BRICK,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
   },
 });

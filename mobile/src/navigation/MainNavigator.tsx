@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BottomTabBarProps, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,109 +44,194 @@ const MoreStack = createNativeStackNavigator<MoreStackParamList>();
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const TAB_CONFIG: Record<string, { icon: TabIconName; iconFocused: TabIconName; label: string }> = {
-  ChatTab:          { icon: 'chatbubble-ellipses-outline', iconFocused: 'chatbubble-ellipses', label: 'Chat' },
-  QaTab:            { icon: 'help-circle-outline',          iconFocused: 'help-circle',          label: 'Q&A' },
-  StatusTab:        { icon: 'add-circle-outline',           iconFocused: 'add-circle',            label: 'Status' },
-  MarketplaceTab:   { icon: 'bag-handle-outline',           iconFocused: 'bag-handle',            label: 'Market' },
-  AnnouncementsTab: { icon: 'newspaper-outline',            iconFocused: 'newspaper',             label: 'News' },
+const TAB_CONFIG: Record<string, { icon: TabIconName; label: string }> = {
+  ChatTab:          { icon: 'chatbubble-outline',  label: 'Chat'   },
+  QaTab:            { icon: 'help-circle-outline', label: 'Q&A'    },
+  StatusTab:        { icon: 'sunny-outline',        label: 'Status' },
+  MarketplaceTab:   { icon: 'storefront-outline',  label: 'Market' },
+  AnnouncementsTab: { icon: 'megaphone-outline',   label: 'News'   },
 };
 
-// Only these 5 tabs appear in the bottom bar; MoreTab is kept for programmatic access.
 const VISIBLE_TABS = ['ChatTab', 'QaTab', 'StatusTab', 'MarketplaceTab', 'AnnouncementsTab'];
+
+const ACTIVE_FLEX   = 2.5;
+const INACTIVE_FLEX = 1;
+
+// ── Single tab button ─────────────────────────────────────────────────────────
+// Receives isFocused and cross-fades between bare icon (inactive) and pill (active).
+// No absolute positioning — pill lives in normal flow inside the flex-animated slot.
+
+function TabButton({
+  isFocused, cfg, onPress, accessibilityLabel,
+}: {
+  isFocused: boolean;
+  cfg: { icon: TabIconName; label: string };
+  onPress: () => void;
+  accessibilityLabel?: string;
+}) {
+  const opacity = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: isFocused ? 1 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [isFocused, opacity]);
+
+  const iconOpacity = opacity.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+
+  return (
+    <TouchableOpacity
+      style={T.tab}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={accessibilityLabel ?? cfg.label}
+    >
+      {/* Bare icon — rendered at all times, fades to 0 when active */}
+      <Animated.View style={[StyleSheet.absoluteFill, T.centered, { opacity: iconOpacity }]}>
+        <Ionicons name={cfg.icon} size={26} color="rgba(255,255,255,0.45)" />
+      </Animated.View>
+
+      {/* Pill — in normal flow (not absolute), fades in when active.
+          The parent Animated.View expands its flex so the pill always has room. */}
+      <Animated.View style={[T.pill, { opacity }]}>
+        <Ionicons name={cfg.icon} size={20} color="#fff" />
+        <Text style={T.pillLabel} numberOfLines={1}>{cfg.label}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+// ── Floating tab bar ──────────────────────────────────────────────────────────
 
 function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const visibleRoutes = state.routes.filter((r) => VISIBLE_TABS.includes(r.name));
+  const visibleRoutes = state.routes.filter(r => VISIBLE_TABS.includes(r.name));
+
+  // One Animated.Value per visible tab — drives the flex of each slot.
+  // useNativeDriver:false is required because flex is a layout property.
+  const flexAnims = useRef(
+    visibleRoutes.map(route => {
+      const globalIdx = state.routes.findIndex(r => r.key === route.key);
+      return new Animated.Value(state.index === globalIdx ? ACTIVE_FLEX : INACTIVE_FLEX);
+    })
+  ).current;
+
+  useEffect(() => {
+    Animated.parallel(
+      visibleRoutes.map((route, i) => {
+        const globalIdx = state.routes.findIndex(r => r.key === route.key);
+        return Animated.timing(flexAnims[i], {
+          toValue: state.index === globalIdx ? ACTIVE_FLEX : INACTIVE_FLEX,
+          duration: 250,
+          useNativeDriver: false,
+        });
+      })
+    ).start();
+  // flexAnims is stable (created once in useRef); visibleRoutes is stable too.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.index]);
 
   return (
-    <View style={[tabStyles.wrapper, { paddingBottom: insets.bottom + 14 }]}>
-      <View style={tabStyles.bar}>
-        {visibleRoutes.map((route) => {
-          const globalIndex = state.routes.findIndex((r) => r.key === route.key);
-          const isFocused = state.index === globalIndex;
-          const cfg = TAB_CONFIG[route.name];
+    <View style={T.wrapper} pointerEvents="box-none">
+      {/* Shadow carrier — must NOT have overflow:hidden or iOS clips the shadow */}
+      <View style={[T.barWrap, { bottom: insets.bottom + 16 }]}>
+        {/* Inner row — overflow:hidden keeps rounded corners clean */}
+        <View style={T.barInner}>
+          {visibleRoutes.map((route, i) => {
+            const globalIdx = state.routes.findIndex(r => r.key === route.key);
+            const isFocused = state.index === globalIdx;
+            const cfg = TAB_CONFIG[route.name];
 
-          const onPress = () => {
-            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-            if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name as never);
-          };
+            const onPress = () => {
+              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+              if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name as never);
+            };
 
-          return (
-            <TouchableOpacity
-              key={route.key}
-              onPress={onPress}
-              style={tabStyles.tab}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={descriptors[route.key].options.tabBarAccessibilityLabel ?? cfg?.label}
-            >
-              <View style={[tabStyles.iconWrap, isFocused && tabStyles.iconWrapActive]}>
-                <Ionicons
-                  name={isFocused ? cfg?.iconFocused : cfg?.icon}
-                  size={26}
-                  color={isFocused ? '#fff' : colors.inactive}
+            return (
+              // Flex-animated slot — expands for active, contracts for inactive
+              <Animated.View key={route.key} style={{ flex: flexAnims[i] }}>
+                <TabButton
+                  isFocused={isFocused}
+                  cfg={cfg}
+                  onPress={onPress}
+                  accessibilityLabel={descriptors[route.key].options.tabBarAccessibilityLabel}
                 />
-              </View>
-              <Text style={[tabStyles.label, isFocused && tabStyles.labelActive]}>
-                {cfg?.label ?? route.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+              </Animated.View>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
 }
 
-const tabStyles = StyleSheet.create({
-  /* Outer shell — matches screen bg so content doesn't bleed through the gaps */
+const T = StyleSheet.create({
+  // Zero-height wrapper — floats over screen content without taking layout space
   wrapper: {
-    backgroundColor: colors.background,
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    height: 0,
+    overflow: 'visible',
+    zIndex: 999,
+    elevation: 24,
   },
-  /* The floating pill itself */
-  bar: {
+
+  // Shadow layer — position:absolute, borderRadius matches pill shape
+  barWrap: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    height: 62,
+    borderRadius: 100,
+    backgroundColor: 'rgba(61, 31, 23, 0.92)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 32,
+    elevation: 24,
+  },
+
+  // Row container with overflow:hidden so rounded corners clip any child content
+  barInner: {
+    flex: 1,
+    height: 62,
+    borderRadius: 100,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 36,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    shadowColor: '#3D1F17',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.13,
-    shadowRadius: 28,
-    elevation: 16,
   },
-  /* Each tab column */
+
+  // Each tab fills its Animated.View slot fully
   tab: {
     flex: 1,
+    height: 62,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
   },
-  /* Perfect circle behind the icon when active */
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+
+  // Helper: center content in absoluteFill
+  centered: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
   },
-  iconWrapActive: {
-    backgroundColor: colors.primary,
+
+  // Active pill — in normal layout flow, centered by parent tab's alignItems
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8B2E2E',
+    borderRadius: 100,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    gap: 6,
   },
-  label: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.inactive,
-    letterSpacing: 0.3,
-  },
-  labelActive: {
-    color: colors.primary,
+
+  pillLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
 

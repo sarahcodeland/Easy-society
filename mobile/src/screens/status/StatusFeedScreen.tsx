@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Dimensions,
   FlatList,
   Image,
   Modal,
@@ -18,229 +19,196 @@ import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import { colors, spacing } from '../../theme';
 
+const { width: SW } = Dimensions.get('window');
+const CARD_MX = 16;
+const CARD_W  = SW - CARD_MX * 2;
+const CARD_H  = 320;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface StatusRow {
-  id: string;
-  user_id: string;
+  id: string; user_id: string;
   media_type: 'text' | 'photo' | 'video';
-  content_url: string | null;
-  text_content: string | null;
-  author_name?: string;
-  author_photo?: string | null;
+  content_url: string | null; text_content: string | null;
+  author_name?: string; author_photo?: string | null;
   location_label?: string | null;
-  like_count?: number;
-  comment_count?: number;
-  share_count?: number;
-  created_at?: string;
-  expires_at: string;
+  like_count?: number; comment_count?: number; share_count?: number;
+  created_at?: string; expires_at: string;
 }
 
-function timeAgo(dateStr?: string): string {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+type Props = NativeStackScreenProps<StatusStackParamList, 'StatusFeed'>;
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function hoursLeft(expiresAt: string) {
+  const h = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 3600000);
+  return h > 1 ? `${h}h left` : '< 1h left';
 }
 
-// ── Story bubble ──────────────────────────────────────────────────────────────
+// ── Status Card ───────────────────────────────────────────────────────────────
 
-function StoryBubble({ item, onPress }: { item: StatusRow; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={S.storyTile} onPress={onPress} activeOpacity={0.82}>
-      <View style={S.storyRing}>
-        <View style={S.storyRingInner}>
-          {item.media_type === 'photo' && item.content_url ? (
-            <Image source={{ uri: item.content_url }} style={S.storyImage} />
-          ) : item.author_photo ? (
-            <Image source={{ uri: item.author_photo }} style={S.storyImage} />
-          ) : (
-            <Avatar name={item.author_name ?? '?'} size={54} />
-          )}
-        </View>
-      </View>
-      <Text style={S.storyLabel} numberOfLines={1}>{item.author_name}</Text>
-    </TouchableOpacity>
-  );
-}
-
-// ── Post card ─────────────────────────────────────────────────────────────────
-
-function StatusCard({ item, onView }: { item: StatusRow; onView: (item: StatusRow) => void }) {
+function StatusCard({ item, onView }: { item: StatusRow; onView: (s: StatusRow) => void }) {
   const likeAnim = useRef(new Animated.Value(1)).current;
   const [liked, setLiked] = useState(false);
 
-  const hasMedia = (item.media_type === 'photo' || item.media_type === 'video') && item.content_url;
+  const hasMedia = (item.media_type === 'photo' || item.media_type === 'video') && !!item.content_url;
 
   function handleLike() {
     Animated.sequence([
-      Animated.timing(likeAnim, { toValue: 1.45, duration: 110, useNativeDriver: true }),
-      Animated.timing(likeAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
+      Animated.timing(likeAnim, { toValue: 1.55, duration: 100, useNativeDriver: true }),
+      Animated.timing(likeAnim, { toValue: 1,    duration: 90,  useNativeDriver: true }),
     ]).start();
     setLiked((v) => !v);
     apiClient.post(`/statuses/${item.id}/like`).catch(() => {});
   }
 
-  async function handleShare() {
-    await Share.share({ message: item.text_content ?? 'Check this post on Easy Society!' });
+  function handleShare() {
+    Share.share({ message: item.text_content ?? 'Check this out on Easy Society!' }).catch(() => {});
   }
 
   return (
-    <View style={S.card}>
-      {/* ── Header ── */}
-      <View style={S.cardHeader}>
-        {item.author_photo ? (
-          <Image source={{ uri: item.author_photo }} style={S.authorPhoto} />
-        ) : (
-          <Avatar name={item.author_name ?? '?'} size={42} />
-        )}
-
-        <View style={S.authorBlock}>
-          <Text style={S.authorName}>{item.author_name ?? 'Community Member'}</Text>
-          <Text style={S.authorRole}>COMMUNITY MEMBER</Text>
-          <Text style={S.authorTime}>{timeAgo(item.created_at)}</Text>
-        </View>
-
-        {item.location_label ? (
-          <View style={S.locationTag}>
-            <View style={S.locationDot} />
-            <Text style={S.locationText} numberOfLines={1}>{item.location_label}</Text>
-          </View>
-        ) : null}
-      </View>
-
-      {/* ── Media ── */}
+    <TouchableOpacity
+      style={S.card}
+      activeOpacity={0.97}
+      onPress={() => hasMedia && onView(item)}
+    >
+      {/* ── Background ── */}
       {hasMedia ? (
-        <TouchableOpacity activeOpacity={0.92} onPress={() => onView(item)}>
-          <Image
-            source={{ uri: item.content_url! }}
-            style={S.cardImage}
-            resizeMode="cover"
-          />
-          {item.media_type === 'video' && (
-            <View style={S.playOverlay}>
-              <Ionicons name="play-circle" size={56} color="rgba(255,255,255,0.88)" />
+        <Image
+          source={{ uri: item.content_url! }}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[StyleSheet.absoluteFillObject, S.textBg]}>
+          <Text style={S.textBgContent} numberOfLines={6}>{item.text_content}</Text>
+        </View>
+      )}
+
+      {/* Subtle full-card tint */}
+      <View style={[StyleSheet.absoluteFillObject, S.tint]} pointerEvents="none" />
+
+      {/* Bottom darkening overlay for text/actions readability */}
+      <View style={S.bottomGrad} pointerEvents="none" />
+
+      {/* ── Top row: user pill + timer ── */}
+      <View style={S.topRow}>
+        <View style={S.userPill}>
+          {item.author_photo ? (
+            <Image source={{ uri: item.author_photo }} style={S.pillImg} />
+          ) : (
+            <View style={S.pillImgFallback}>
+              <Text style={S.pillLetter}>{(item.author_name ?? '?')[0].toUpperCase()}</Text>
             </View>
           )}
-        </TouchableOpacity>
-      ) : null}
-
-      {/* ── Text body ── */}
-      {item.text_content ? (
-        <Text style={[S.bodyText, !hasMedia && S.bodyTextOnly]}>
-          {item.text_content}
-        </Text>
-      ) : null}
-
-      {/* ── Footer ── */}
-      <View style={S.cardFooter}>
-        <View style={S.reactions}>
-          {/* Like */}
-          <TouchableOpacity style={S.reactionBtn} onPress={handleLike} activeOpacity={0.75}>
-            <Animated.View style={{ transform: [{ scale: likeAnim }] }}>
-              <Ionicons
-                name={liked ? 'heart' : 'heart-outline'}
-                size={20}
-                color={liked ? colors.primary : colors.textSecondary}
-              />
-            </Animated.View>
-            <Text style={S.reactionCount}>{(item.like_count ?? 0) + (liked ? 1 : 0)}</Text>
-          </TouchableOpacity>
-
-          {/* Comment */}
-          <TouchableOpacity style={S.reactionBtn} activeOpacity={0.75}>
-            <Ionicons name="chatbubble-outline" size={19} color={colors.textSecondary} />
-            <Text style={S.reactionCount}>{item.comment_count ?? 0}</Text>
-          </TouchableOpacity>
-
-          {/* Forward */}
-          <TouchableOpacity style={S.reactionBtn} activeOpacity={0.75}>
-            <Ionicons name="arrow-redo-outline" size={19} color={colors.textSecondary} />
-            <Text style={S.reactionCount}>{item.share_count ?? 0}</Text>
-          </TouchableOpacity>
+          <View style={{ flexShrink: 1 }}>
+            <Text style={S.pillName} numberOfLines={1}>{item.author_name ?? 'Community'}</Text>
+            <Text style={S.pillArea}>COMMUNITY MEMBER</Text>
+          </View>
         </View>
 
-        {/* Share link */}
-        <TouchableOpacity onPress={handleShare} style={S.shareBtn} activeOpacity={0.75}>
-          <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={S.timerPill}>
+          <Ionicons name="time-outline" size={11} color="#fff" />
+          <Text style={S.timerText}>{hoursLeft(item.expires_at)}</Text>
+        </View>
       </View>
-    </View>
+
+      {/* ── Bottom row: text + actions ── */}
+      <View style={S.bottomRow}>
+        {hasMedia && !!item.text_content && (
+          <Text style={S.cardText} numberOfLines={3}>{item.text_content}</Text>
+        )}
+
+        <View style={S.actionBar}>
+          {/* Left: like / comment / repost */}
+          <View style={S.actionGroup}>
+            <TouchableOpacity style={S.actionBtn} onPress={handleLike} activeOpacity={0.72}>
+              <Animated.View style={{ transform: [{ scale: likeAnim }] }}>
+                <Ionicons
+                  name={liked ? 'heart' : 'heart-outline'}
+                  size={21}
+                  color={liked ? '#FF5B7A' : '#fff'}
+                />
+              </Animated.View>
+              <Text style={S.actionCount}>{(item.like_count ?? 0) + (liked ? 1 : 0)}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={S.actionBtn} activeOpacity={0.72}>
+              <Ionicons name="chatbubble-outline" size={20} color="#fff" />
+              <Text style={S.actionCount}>{item.comment_count ?? 0}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={S.actionBtn} activeOpacity={0.72}>
+              <Ionicons name="repeat-outline" size={22} color="#fff" />
+              <Text style={S.actionCount}>{item.share_count ?? 0}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Right: share */}
+          <TouchableOpacity style={S.actionBtn} onPress={handleShare} activeOpacity={0.72}>
+            <Ionicons name="arrow-redo-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Video play indicator */}
+      {item.media_type === 'video' && hasMedia && (
+        <View style={S.playOverlay} pointerEvents="none">
+          <Ionicons name="play-circle" size={46} color="rgba(255,255,255,0.85)" />
+        </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-type Props = NativeStackScreenProps<StatusStackParamList, 'StatusFeed'>;
-
 export default function StatusFeedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [statuses, setStatuses] = useState<StatusRow[]>([]);
-  const [viewing, setViewing] = useState<StatusRow | null>(null);
+  const [viewing, setViewing]   = useState<StatusRow | null>(null);
 
   const load = useCallback(async () => {
-    const { data } = await apiClient.get('/statuses/feed');
-    setStatuses(data.statuses ?? []);
+    try {
+      const { data } = await apiClient.get('/statuses/feed');
+      setStatuses(data.statuses ?? []);
+    } catch {}
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  async function openStory(status: StatusRow) {
-    setViewing(status);
-    apiClient.post(`/statuses/${status.id}/view`).catch(() => {});
-  }
-
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={[S.screen, { paddingTop: insets.top }]}>
+
+      {/* ── Top bar ── */}
+      <View style={S.topBar}>
+        <Text style={S.topBarTitle}>Easy Society</Text>
+        <View style={S.topBarRight}>
+          <TouchableOpacity style={S.iconBtn}>
+            <Ionicons name="search-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity>
+            <Avatar name="Me" size={34} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Feed ── */}
       <FlatList
         data={statuses}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(s) => s.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-
-        ListHeaderComponent={
-          <View>
-            {/* ── Story tray — scrolls with the page, not sticky (~1/4 height) ── */}
-            <FlatList
-              horizontal
-              data={statuses}
-              keyExtractor={(item) => `story-${item.id}`}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={S.storyTray}
-              ListHeaderComponent={
-                <TouchableOpacity
-                  style={S.storyTile}
-                  activeOpacity={0.82}
-                  onPress={() => navigation.navigate('CreateStatus')}
-                >
-                  <View style={S.storyAddCircle}>
-                    <Ionicons name="add" size={30} color={colors.primary} />
-                  </View>
-                  <Text style={S.storyLabel}>Your Status</Text>
-                </TouchableOpacity>
-              }
-              renderItem={({ item }) => (
-                <StoryBubble item={item} onPress={() => openStory(item)} />
-              )}
-            />
-
-            {/* ── Feed section header ── */}
-            <Text style={S.feedLabel}>Community Posts</Text>
-          </View>
-        }
-
+        decelerationRate="fast"
+        contentContainerStyle={S.list}
+        ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
         renderItem={({ item }) => (
-          <StatusCard item={item} onView={openStory} />
+          <StatusCard item={item} onView={setViewing} />
         )}
-
         ListEmptyComponent={
           <View style={S.empty}>
-            <Ionicons name="newspaper-outline" size={40} color={colors.border} />
-            <Text style={S.emptyText}>No posts yet. Be the first to share!</Text>
+            <Ionicons name="sunny-outline" size={44} color={colors.border} />
+            <Text style={S.emptyTitle}>No statuses yet</Text>
+            <Text style={S.emptyBody}>Be the first to share what's happening in your village.</Text>
           </View>
         }
       />
@@ -251,14 +219,14 @@ export default function StatusFeedScreen({ navigation }: Props) {
         onPress={() => navigation.navigate('CreateStatus')}
         activeOpacity={0.85}
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
-      {/* ── Story / media viewer ── */}
+      {/* ── Full-screen media viewer ── */}
       <Modal visible={!!viewing} animationType="fade" onRequestClose={() => setViewing(null)}>
         <TouchableOpacity style={S.viewerBg} onPress={() => setViewing(null)} activeOpacity={1}>
           {viewing?.media_type === 'photo' && viewing.content_url ? (
-            <Image source={{ uri: viewing.content_url }} style={S.viewerImage} resizeMode="contain" />
+            <Image source={{ uri: viewing.content_url }} style={S.viewerImg} resizeMode="contain" />
           ) : (
             <View style={S.viewerTextCard}>
               <Text style={S.viewerText}>{viewing?.text_content}</Text>
@@ -266,6 +234,7 @@ export default function StatusFeedScreen({ navigation }: Props) {
           )}
         </TouchableOpacity>
       </Modal>
+
     </View>
   );
 }
@@ -273,192 +242,123 @@ export default function StatusFeedScreen({ navigation }: Props) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const S = StyleSheet.create({
-  // Story tray
-  storyTray: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.md,
+  screen: { flex: 1, backgroundColor: colors.background },
+
+  // ── Top bar
+  topBar: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10,
   },
-  storyTile: { width: 68, alignItems: 'center' },
-  storyRing: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    padding: 3,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  storyRingInner: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 28,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  storyImage: { width: '100%', height: '100%' },
-  storyAddCircle: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
-  },
-  storyLabel: {
-    fontSize: 10.5,
-    marginTop: 5,
-    color: colors.textSecondary,
-    fontWeight: '600',
-    textAlign: 'center',
+  topBarTitle: { fontSize: 22, fontWeight: '800', color: colors.primary, letterSpacing: -0.4 },
+  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconBtn: { padding: 4 },
+
+  // ── Feed list
+  list: {
+    paddingHorizontal: CARD_MX,
+    paddingTop: spacing.sm,
+    paddingBottom: 130,
   },
 
-  // Feed label
-  feedLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-  },
-
-  // Post card
+  // ── Card
   card: {
-    backgroundColor: '#fff',
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    borderRadius: 20,
-    overflow: 'hidden',
+    width: CARD_W, height: CARD_H,
+    borderRadius: 24, overflow: 'hidden',
+    backgroundColor: '#C5A898',
     shadowColor: '#3D1F17',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
-    elevation: 3,
+    shadowOpacity: 0.14, shadowRadius: 16, elevation: 5,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  authorPhoto: { width: 42, height: 42, borderRadius: 21 },
-  authorBlock: { flex: 1 },
-  authorName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
-  authorRole: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 0.6,
-    marginTop: 1,
-  },
-  authorTime: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
 
-  locationTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.primary,
-    borderRadius: 100,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    maxWidth: 110,
+  // Card backgrounds
+  tint: { backgroundColor: 'rgba(0,0,0,0.10)' },
+  bottomGrad: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    height: CARD_H * 0.60,
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
-  locationDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+  textBg: {
+    backgroundColor: '#1B3A2D',
+    alignItems: 'center', justifyContent: 'center', padding: 28,
   },
-  locationText: { fontSize: 10.5, fontWeight: '700', color: '#fff' },
+  textBgContent: {
+    fontSize: 28, fontWeight: '800', color: '#fff',
+    textAlign: 'center', lineHeight: 36, letterSpacing: 2,
+  },
 
-  // Media
-  cardImage: { width: '100%', height: 230 },
+  // ── Top row
+  topRow: {
+    position: 'absolute', top: 12, left: 12, right: 12,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+  },
+  userPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    borderRadius: 100, paddingLeft: 4, paddingRight: 10, paddingVertical: 5,
+    maxWidth: CARD_W * 0.62,
+  },
+  pillImg: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: '#fff' },
+  pillImgFallback: {
+    width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: '#fff',
+    backgroundColor: colors.primaryDark, alignItems: 'center', justifyContent: 'center',
+  },
+  pillLetter: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  pillName: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  pillArea: { fontSize: 8, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5, marginTop: 1 },
+
+  timerPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#8B2E2E',
+    borderRadius: 100, paddingHorizontal: 9, paddingVertical: 5,
+  },
+  timerText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+
+  // ── Bottom row
+  bottomRow: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    padding: 14, gap: 8,
+  },
+  cardText: {
+    fontSize: 13, fontWeight: '600', color: '#fff',
+    lineHeight: 18, marginBottom: 8,
+  },
+  actionBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actionGroup: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  actionCount: { fontSize: 12.5, fontWeight: '700', color: '#fff' },
+
+  // Video play
   playOverlay: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.18)',
+    alignItems: 'center', justifyContent: 'center',
   },
 
-  // Text body
-  bodyText: {
-    fontSize: 14,
-    color: colors.textPrimary,
-    lineHeight: 21,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  bodyTextOnly: {
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
-  },
+  // ── Empty state
+  empty: { paddingTop: 80, alignItems: 'center', gap: 10, paddingHorizontal: 32 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: colors.textPrimary },
+  emptyBody: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
 
-  // Footer
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    marginTop: spacing.xs,
-  },
-  reactions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  reactionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  reactionCount: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-  shareBtn: { padding: 4 },
-
-  // Empty
-  empty: {
-    alignItems: 'center',
-    paddingTop: 60,
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-  },
-  emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
-
-  // FAB
+  // ── FAB
   fab: {
-    position: 'absolute',
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    position: 'absolute', right: 20,
+    width: 56, height: 56, borderRadius: 28,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowOpacity: 0.4, shadowRadius: 14, elevation: 8,
   },
 
-  // Viewer modal
-  viewerBg: {
-    flex: 1,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewerImage: { width: '100%', height: '100%' },
+  // ── Media viewer
+  viewerBg: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  viewerImg: { width: '100%', height: '100%' },
   viewerTextCard: {
-    backgroundColor: colors.primary,
-    borderRadius: 20,
-    margin: 32,
-    padding: 32,
+    backgroundColor: colors.primary, borderRadius: 20,
+    margin: 32, padding: 32,
   },
-  viewerText: { color: '#fff', fontSize: 22, lineHeight: 32, textAlign: 'center', fontWeight: '600' },
+  viewerText: {
+    color: '#fff', fontSize: 22, lineHeight: 32,
+    textAlign: 'center', fontWeight: '600',
+  },
 });

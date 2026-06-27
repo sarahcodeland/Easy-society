@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
@@ -21,6 +21,11 @@ import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import { colors, spacing } from '../../theme';
+import MarketplaceFiltersModal, {
+  MarketplaceFilters,
+  MarketplaceTab,
+  DEFAULT_FILTERS,
+} from './MarketplaceFiltersModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,7 +46,7 @@ interface ListingRow {
   created_at: string;
 }
 
-type TabKey = ListingCategory | 'businesses';
+type TabKey = MarketplaceTab;
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: ListingCategory.BUY_SELL,  label: 'Buy / Sell',  icon: 'pricetag-outline' },
@@ -342,6 +347,8 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [recent, setRecent] = useState<ListingRow[]>([]);
   const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<MarketplaceFilters>(DEFAULT_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     apiClient.get('/marketplace/listings')
@@ -349,11 +356,43 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
       .catch(() => {});
   }, []);
 
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (filters.minPrice > 0 || filters.maxPrice < 100000) n++;
+    if (filters.maxDistance !== DEFAULT_FILTERS.maxDistance) n++;
+    if (filters.sortBy !== 'newest') n++;
+    if (filters.propertyTypes.length) n++;
+    if (filters.furnishing.length) n++;
+    if (filters.serviceTypes.length) n++;
+    if (filters.minRating) n++;
+    if (filters.jobTypes.length) n++;
+    if (filters.experience.length) n++;
+    return n;
+  }, [filters]);
+
   const loadTab = useCallback(async () => {
-    if (activeTab === 'businesses') return;
-    const { data } = await apiClient.get('/marketplace/listings', { params: { category: activeTab } });
-    setListings(data.listings ?? []);
-  }, [activeTab]);
+    if (activeTab === ListingCategory.BUSINESSES) return;
+    try {
+      const params: Record<string, unknown> = { category: activeTab };
+      if (filters.minPrice > 0) params.min_price = filters.minPrice;
+      if (filters.maxPrice < 100000) params.max_price = filters.maxPrice;
+      if (filters.sortBy !== 'newest') params.sort = filters.sortBy;
+      if (activeTab === ListingCategory.RENT) {
+        if (filters.propertyTypes.length) params.property_types = filters.propertyTypes.join(',');
+        if (filters.furnishing.length) params.furnishing = filters.furnishing.join(',');
+      }
+      if (activeTab === ListingCategory.SERVICES) {
+        if (filters.serviceTypes.length) params.service_types = filters.serviceTypes.join(',');
+        if (filters.minRating) params.min_rating = filters.minRating;
+      }
+      if (activeTab === ListingCategory.JOBS) {
+        if (filters.jobTypes.length) params.job_types = filters.jobTypes.join(',');
+        if (filters.experience.length) params.experience = filters.experience.join(',');
+      }
+      const { data } = await apiClient.get('/marketplace/listings', { params });
+      setListings(data.listings ?? []);
+    } catch {}
+  }, [activeTab, filters]);
 
   useFocusEffect(useCallback(() => { loadTab(); }, [loadTab]));
 
@@ -408,8 +447,13 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={S.filterBtn}>
+        <TouchableOpacity style={S.filterBtn} onPress={() => setShowFilters(true)}>
           <Ionicons name="options-outline" size={20} color={colors.primary} />
+          {activeFilterCount > 0 && (
+            <View style={S.filterBadge}>
+              <Text style={S.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -507,6 +551,19 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
+
+      <MarketplaceFiltersModal
+        visible={showFilters}
+        activeTab={activeTab}
+        filters={filters}
+        onApply={(newTab, newFilters) => {
+          setActiveTab(newTab);
+          setFilters(newFilters);
+          setSearch('');
+          setShowFilters(false);
+        }}
+        onClose={() => setShowFilters(false)}
+      />
     </View>
   );
 }
@@ -554,6 +611,12 @@ const S = StyleSheet.create({
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
+  filterBadge: {
+    position: 'absolute', top: -4, right: -4,
+    width: 17, height: 17, borderRadius: 9,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  filterBadgeText: { fontSize: 9, color: '#fff', fontWeight: '800' },
 
   // Just Posted
   sectionLabel: {
