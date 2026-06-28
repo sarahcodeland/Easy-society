@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { apiClient } from '../../api/client';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 interface NotificationRow {
   id: string;
@@ -12,24 +13,30 @@ interface NotificationRow {
 }
 
 export default function NotificationsScreen() {
+  const navPadding = useNavPadding();
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
 
   const load = useCallback(async () => {
-    const { data } = await apiClient.get('/notifications');
-    setNotifications(data.notifications);
+    try {
+      const { data } = await apiClient.get('/notifications');
+      setNotifications(data.notifications);
+    } catch {}
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function markRead(id: string) {
-    await apiClient.post(`/notifications/${id}/read`);
-    load();
+    try {
+      await apiClient.post(`/notifications/${id}/read`);
+      load();
+    } catch {}
   }
 
   return (
     <FlatList
       data={notifications}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: navPadding }}
       ListEmptyComponent={<Text style={styles.empty}>No notifications yet</Text>}
       renderItem={({ item }) => (
         <TouchableOpacity style={[styles.row, !item.is_read && styles.unread]} onPress={() => markRead(item.id)}>

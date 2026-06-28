@@ -4,10 +4,12 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MoreStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import { disconnectChatSocket } from '../../api/socket';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 type Props = NativeStackScreenProps<MoreStackParamList, 'MoreMenu'>;
 
 const LIVE_ITEMS: { label: string; screen: keyof MoreStackParamList }[] = [
+  { label: 'Community Members', screen: 'CommunityMembers' },
   { label: 'Weather', screen: 'Weather' },
   { label: 'Government Schemes', screen: 'Schemes' },
   { label: 'Notifications', screen: 'Notifications' },
@@ -31,11 +33,13 @@ const PHASE_2_ITEMS = [
 
 export default function MoreMenuScreen({ navigation }: Props) {
   const logout = useAuthStore((s) => s.logout);
+  const navPadding = useNavPadding();
 
   return (
     <FlatList
       data={[...LIVE_ITEMS.map((i) => ({ ...i, isPhase2: false })), ...PHASE_2_ITEMS.map((label) => ({ label, screen: 'ComingSoon' as const, isPhase2: true }))]}
       keyExtractor={(item) => item.label}
+      contentContainerStyle={{ paddingBottom: navPadding }}
       ListFooterComponent={
         <TouchableOpacity
           style={styles.logout}
@@ -53,7 +57,7 @@ export default function MoreMenuScreen({ navigation }: Props) {
           onPress={() =>
             item.screen === 'ComingSoon'
               ? navigation.navigate('ComingSoon', { featureTitle: item.label })
-              : navigation.navigate(item.screen as 'Weather' | 'Schemes' | 'Notifications')
+              : navigation.navigate(item.screen as 'Weather' | 'Schemes' | 'Notifications' | 'CommunityMembers')
           }
         >
           <Text style={styles.label}>{item.label}</Text>

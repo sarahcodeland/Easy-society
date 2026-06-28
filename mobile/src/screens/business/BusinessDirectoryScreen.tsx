@@ -3,6 +3,7 @@ import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 interface BusinessRow {
   id: string;
@@ -17,6 +18,7 @@ interface BusinessRow {
 type Props = NativeStackScreenProps<MarketplaceStackParamList, 'BusinessDirectory'>;
 
 export default function BusinessDirectoryScreen({ navigation }: Props) {
+  const navPadding = useNavPadding();
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
 
   const load = useCallback(async () => {
@@ -31,6 +33,7 @@ export default function BusinessDirectoryScreen({ navigation }: Props) {
       <FlatList
         data={businesses}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: navPadding }}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('BusinessDetail', { businessId: item.id })}>
             {item.cover_photo_url && <Image source={{ uri: item.cover_photo_url }} style={styles.thumb} />}

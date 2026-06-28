@@ -18,6 +18,7 @@ import { StatusStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import { colors, spacing } from '../../theme';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_MX = 16;
@@ -32,7 +33,7 @@ interface StatusRow {
   content_url: string | null; text_content: string | null;
   author_name?: string; author_photo?: string | null;
   location_label?: string | null;
-  like_count?: number; comment_count?: number; share_count?: number;
+  like_count?: number; comment_count?: number; repost_count?: number;
   created_at?: string; expires_at: string;
 }
 
@@ -58,8 +59,12 @@ function StatusCard({ item, onView }: { item: StatusRow; onView: (s: StatusRow) 
       Animated.timing(likeAnim, { toValue: 1.55, duration: 100, useNativeDriver: true }),
       Animated.timing(likeAnim, { toValue: 1,    duration: 90,  useNativeDriver: true }),
     ]).start();
-    setLiked((v) => !v);
-    apiClient.post(`/statuses/${item.id}/like`).catch(() => {});
+    const next = !liked;
+    setLiked(next);
+    const req = next
+      ? apiClient.post(`/statuses/${item.id}/like`)
+      : apiClient.delete(`/statuses/${item.id}/like`);
+    req.catch(() => {});
   }
 
   function handleShare() {
@@ -140,7 +145,7 @@ function StatusCard({ item, onView }: { item: StatusRow; onView: (s: StatusRow) 
 
             <TouchableOpacity style={S.actionBtn} activeOpacity={0.72}>
               <Ionicons name="repeat-outline" size={22} color="#fff" />
-              <Text style={S.actionCount}>{item.share_count ?? 0}</Text>
+              <Text style={S.actionCount}>{item.repost_count ?? 0}</Text>
             </TouchableOpacity>
           </View>
 
@@ -165,6 +170,7 @@ function StatusCard({ item, onView }: { item: StatusRow; onView: (s: StatusRow) 
 
 export default function StatusFeedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const navPadding = useNavPadding();
   const [statuses, setStatuses] = useState<StatusRow[]>([]);
   const [viewing, setViewing]   = useState<StatusRow | null>(null);
 
@@ -199,7 +205,7 @@ export default function StatusFeedScreen({ navigation }: Props) {
         keyExtractor={(s) => s.id}
         showsVerticalScrollIndicator={false}
         decelerationRate="fast"
-        contentContainerStyle={S.list}
+        contentContainerStyle={[S.list, { paddingBottom: navPadding }]}
         ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
         renderItem={({ item }) => (
           <StatusCard item={item} onView={setViewing} />

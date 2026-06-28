@@ -15,6 +15,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavPadding } from '../../hooks/useNavPadding';
 import { ListingCategory } from '@easysociety/shared';
 import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
@@ -146,13 +147,7 @@ function Stars({ n = 5, size = 11 }: { n?: number; size?: number }) {
 function Gallery({ photos, isPremium }: { photos: Photo[]; isPremium: boolean }) {
   const [idx, setIdx] = useState(0);
 
-  if (!photos.length) {
-    return (
-      <View style={D.galleryPh}>
-        <Ionicons name="image-outline" size={44} color="rgba(255,255,255,0.35)" />
-      </View>
-    );
-  }
+  if (!photos.length) return null;
 
   return (
     <View style={{ height: IMG_H }}>
@@ -195,6 +190,7 @@ function Gallery({ photos, isPremium }: { photos: Photo[]; isPremium: boolean })
 export default function ListingDetailScreen({ route, navigation }: Props) {
   const { listingId } = route.params;
   const insets = useSafeAreaInsets();
+  const navPadding = useNavPadding();
 
   const [data, setData]         = useState<any>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -224,7 +220,11 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
     const next = !saved;
     setSaved(next);
     try {
-      await apiClient.post(`/marketplace/listings/${listingId}/save`);
+      if (next) {
+        await apiClient.post(`/marketplace/listings/${listingId}/save`);
+      } else {
+        await apiClient.delete(`/marketplace/listings/${listingId}/save`);
+      }
     } catch {
       setSaved(!next);
     }
@@ -276,7 +276,7 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
       </View>
 
       {/* ── Scrollable body ── */}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: navPadding + 60 }}>
 
         {/* Gallery */}
         <Gallery photos={photos} isPremium={isPremium} />
@@ -436,7 +436,7 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
       </ScrollView>
 
       {/* ── Fixed CTA bar ── */}
-      <View style={[D.ctaBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <View style={[D.ctaBar, { bottom: insets.bottom + 78, paddingBottom: 8 }]}>
         <TouchableOpacity
           style={D.callBtn}
           onPress={phone ? () => Linking.openURL(`tel:${phone}`) : undefined}
@@ -472,10 +472,6 @@ const D = StyleSheet.create({
   },
 
   // ── Gallery
-  galleryPh: {
-    width: SW, height: IMG_H,
-    backgroundColor: '#C5A898', alignItems: 'center', justifyContent: 'center',
-  },
   premiumBadge: {
     position: 'absolute', top: 10, left: 10,
     backgroundColor: C.gold, borderRadius: 4,

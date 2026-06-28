@@ -6,6 +6,7 @@ import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import Badge from '../../components/Badge';
 import { colors, spacing } from '../../theme';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 interface ChatGroupRow {
   id: string;
@@ -18,6 +19,7 @@ interface ChatGroupRow {
 type Props = NativeStackScreenProps<ChatStackParamList, 'ChatList'>;
 
 export default function ChatListScreen({ navigation }: Props) {
+  const navPadding = useNavPadding();
   const [groups, setGroups] = useState<ChatGroupRow[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -35,6 +37,7 @@ export default function ChatListScreen({ navigation }: Props) {
       style={styles.flex}
       data={groups}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: navPadding }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       ListEmptyComponent={<Text style={styles.empty}>No chat groups yet — finish your profile setup to join your area group.</Text>}
       renderItem={({ item }) => (

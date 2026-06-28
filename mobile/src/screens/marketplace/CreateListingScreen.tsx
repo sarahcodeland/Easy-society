@@ -21,6 +21,7 @@ import { VisibilityLevel } from '@easysociety/shared';
 import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import { colors, spacing, radii } from '../../theme';
+import DateTimePickerField from '../../components/DateTimePickerField';
 
 type Props = NativeStackScreenProps<MarketplaceStackParamList, 'CreateListing'>;
 
@@ -37,7 +38,7 @@ function SectionHeader({ n, title }: { n: number; title: string }) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <View style={{ marginBottom: spacing.md }}>
+    <View style={{ marginBottom: 6 }}>
       <Text style={U.fieldLabel}>{label}</Text>
       {children}
     </View>
@@ -185,6 +186,7 @@ const AMENITIES_RENT = [
   { key: 'security', label: 'Security' },
 ];
 
+
 function RentFields({ d, set }: { d: any; set: (k: string, v: any) => void }) {
   function toggleAmenity(a: string) {
     const cur: string[] = d.amenities ?? [];
@@ -208,7 +210,12 @@ function RentFields({ d, set }: { d: any; set: (k: string, v: any) => void }) {
         <Input placeholder="e.g. 50,000" value={d.deposit_amount ?? ''} onChangeText={(v) => set('deposit_amount', v)} keyboardType="numeric" />
       </Field>
       <Field label="Available From">
-        <Input placeholder="e.g. 1 July 2025" value={d.available_from ?? ''} onChangeText={(v) => set('available_from', v)} />
+        <DateTimePickerField
+          value={d.available_from ?? ''}
+          onChange={(iso) => set('available_from', iso)}
+          label="Available From"
+          minimumDate={new Date()}
+        />
       </Field>
       <Field label="Preferred Tenant">
         <ChipSelect options={TENANT_PREF} value={d.preferred_tenant ?? 'any'} onSelect={(v) => set('preferred_tenant', v)} />
@@ -321,7 +328,7 @@ function JobFields({ d, set }: { d: any; set: (k: string, v: any) => void }) {
         <ChipSelect options={GENDER_PREF} value={d.gender_preference ?? 'any'} onSelect={(v) => set('gender_preference', v)} />
       </Field>
       <View style={U.urgentRow}>
-        <View style={{ flex: 1, paddingRight: spacing.md }}>
+        <View style={{ flex: 1, paddingRight: 8 }}>
           <Text style={U.fieldLabel}>Immediate Joiner Needed</Text>
           <Text style={U.urgentSub}>Mark this to attract candidates available right away</Text>
         </View>
@@ -541,7 +548,7 @@ export default function CreateListingScreen({ route, navigation }: Props) {
 
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={U.body}
+        contentContainerStyle={[U.body, { paddingBottom: insets.bottom + 94 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -627,98 +634,99 @@ export default function CreateListingScreen({ route, navigation }: Props) {
 const U = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
 
-  // Single top bar — back button + horizontal tab strip in one row
   topBar: {
     flexDirection: 'row', alignItems: 'center',
-    paddingLeft: spacing.md, paddingRight: spacing.sm,
-    height: 52,
+    paddingLeft: 10, paddingRight: 6, height: 46,
     backgroundColor: colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: spacing.sm,
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', marginRight: 6,
   },
-  tabRow: { gap: spacing.sm, alignItems: 'center', paddingRight: spacing.md },
+  tabRow: { gap: 5, alignItems: 'center', paddingRight: 10 },
   tabPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 100,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 100,
     backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border,
   },
   tabPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  tabText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
+  tabText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
   tabTextActive: { color: '#fff' },
 
-  body: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 48 },
+  body: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 36 },
 
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, marginBottom: spacing.sm },
-  stepBadge: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  stepNum: { fontSize: 12, fontWeight: '800', color: '#fff' },
-  stepLabel: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 4 },
+  stepBadge: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  stepNum: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  stepLabel: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },
 
   card: {
-    backgroundColor: '#fff', borderRadius: 16, padding: spacing.md,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 10, padding: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
 
-  fieldLabel: { fontSize: 12.5, fontWeight: '700', color: colors.textSecondary, marginBottom: 6, marginTop: 4 },
+  fieldLabel: {
+    fontSize: 10, fontWeight: '700', color: colors.textSecondary,
+    marginBottom: 4, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.3,
+  },
   input: {
     borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.input,
-    paddingHorizontal: 13, paddingVertical: 11, fontSize: 14,
-    color: colors.textPrimary, backgroundColor: '#fff',
-    marginBottom: spacing.sm,
+    paddingHorizontal: 10, paddingVertical: 7, fontSize: 13,
+    color: colors.textPrimary, backgroundColor: '#fff', marginBottom: 5,
   },
-  multiline: { minHeight: 90, textAlignVertical: 'top' },
+  multiline: { minHeight: 60, textAlignVertical: 'top' },
 
-  salaryRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  salarySep: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  salaryRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 },
+  salarySep: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
 
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 5 },
   chip: {
-    flexShrink: 0,
-    borderWidth: 1.5, borderColor: colors.border, borderRadius: 100,
-    paddingVertical: 7, paddingHorizontal: 14, backgroundColor: colors.card,
+    flexShrink: 0, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: 100, paddingVertical: 5, paddingHorizontal: 10, backgroundColor: colors.card,
   },
   chipActive: { flexShrink: 0, backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-  chipTextActive: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  chipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  chipTextActive: { fontSize: 12, fontWeight: '600', color: '#fff' },
 
-  photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
-  photoThumb: { width: 80, height: 80, borderRadius: 12, overflow: 'hidden' },
+  photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
+  photoThumb: { width: 64, height: 64, borderRadius: 10, overflow: 'hidden' },
   photoImg: { width: '100%', height: '100%' },
   photoRemove: {
-    position: 'absolute', top: 4, right: 4,
-    width: 20, height: 20, borderRadius: 10,
+    position: 'absolute', top: 3, right: 3,
+    width: 17, height: 17, borderRadius: 9,
     backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center',
   },
   photoAdd: {
-    width: 80, height: 80, borderRadius: 12,
+    width: 64, height: 64, borderRadius: 10,
     borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: colors.card,
+    alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: colors.card,
   },
-  photoAddText: { fontSize: 11, color: colors.textSecondary, fontWeight: '600' },
-  photoHint: { fontSize: 11, color: colors.textMuted },
+  photoAddText: { fontSize: 10, color: colors.textSecondary, fontWeight: '600' },
+  photoHint: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
 
   urgentRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.card, borderRadius: radii.input,
-    padding: spacing.md, marginBottom: spacing.sm,
+    paddingHorizontal: 10, paddingVertical: 8, marginBottom: 5,
   },
-  urgentSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  urgentSub: { fontSize: 10, color: colors.textMuted, marginTop: 1 },
 
-  skillInputRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  skillInputRow: { flexDirection: 'row', gap: 6, marginBottom: 5 },
   skillAddBtn: {
-    width: 44, height: 44, borderRadius: 10,
+    width: 38, height: 38, borderRadius: 8,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
   },
 
   submitBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: colors.primary, borderRadius: 100,
-    paddingVertical: 15, marginTop: spacing.xl,
+    paddingVertical: 11, marginTop: 10,
   },
   submitDisabled: { opacity: 0.55 },
-  submitText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  submitText: { color: '#fff', fontSize: 14, fontWeight: '800' },
 });

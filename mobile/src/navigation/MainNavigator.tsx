@@ -34,6 +34,8 @@ import WeatherScreen from '../screens/weather/WeatherScreen';
 import SchemesScreen from '../screens/schemes/SchemesScreen';
 import NotificationsScreen from '../screens/more/NotificationsScreen';
 import ComingSoonScreen from '../screens/phase2/ComingSoonScreen';
+import CommunityMembersScreen from '../screens/community/CommunityMembersScreen';
+import UserProfileScreen from '../screens/community/UserProfileScreen';
 
 const Tabs = createBottomTabNavigator<MainTabParamList>();
 const ChatStack = createNativeStackNavigator<ChatStackParamList>();
@@ -288,6 +290,8 @@ function MoreStackNavigator() {
       <MoreStack.Screen name="Schemes" component={SchemesScreen} />
       <MoreStack.Screen name="Notifications" component={NotificationsScreen} />
       <MoreStack.Screen name="ComingSoon" component={ComingSoonScreen} />
+      <MoreStack.Screen name="CommunityMembers" component={CommunityMembersScreen} />
+      <MoreStack.Screen name="UserProfile" component={UserProfileScreen} />
     </MoreStack.Navigator>
   );
 }

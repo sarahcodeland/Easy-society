@@ -4,6 +4,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 type Props = NativeStackScreenProps<MarketplaceStackParamList, 'BusinessDetail'>;
 
@@ -11,6 +12,7 @@ const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export default function BusinessDetailScreen({ route }: Props) {
   const { businessId } = route.params;
+  const navPadding = useNavPadding();
   const [data, setData] = useState<any>(null);
   const user = useAuthStore((s) => s.user);
 
@@ -45,6 +47,7 @@ export default function BusinessDetailScreen({ route }: Props) {
     <FlatList
       data={reviews}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: navPadding }}
       ListHeaderComponent={
         <View>
           <ScrollView horizontal>

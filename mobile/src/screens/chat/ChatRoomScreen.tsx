@@ -117,8 +117,12 @@ export default function ChatRoomScreen({ route, navigation }: Props) {
     if (Alert.prompt) {
       Alert.prompt('Report message', 'Reason', async (reason) => {
         if (!reason) return;
-        await apiClient.post(`/chat/messages/${messageId}/report`, { reason });
-        Alert.alert('Reported', 'Thanks — a moderator will review this.');
+        try {
+          await apiClient.post(`/chat/messages/${messageId}/report`, { reason });
+          Alert.alert('Reported', 'Thanks — a moderator will review this.');
+        } catch {
+          Alert.alert('Error', 'Could not submit report. Try again.');
+        }
       });
     } else {
       Alert.alert('Reported', 'Reporting requires the native prompt (iOS).');
@@ -127,8 +131,12 @@ export default function ChatRoomScreen({ route, navigation }: Props) {
 
   async function blockSender(senderId: string | null) {
     if (!senderId) return;
-    await apiClient.post(`/users/${senderId}/block`);
-    Alert.alert('Blocked', 'You will no longer see content from this user.');
+    try {
+      await apiClient.post(`/users/${senderId}/block`);
+      Alert.alert('Blocked', 'You will no longer see content from this user.');
+    } catch {
+      Alert.alert('Error', 'Could not block this user. Try again.');
+    }
   }
 
   const renderMessage = ({ item }: { item: ChatMessageRow }) => {

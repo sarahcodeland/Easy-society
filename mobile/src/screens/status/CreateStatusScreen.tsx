@@ -133,7 +133,7 @@ export default function CreateStatusScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={S.body}
+        contentContainerStyle={[S.body, { paddingBottom: insets.bottom + 94 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -184,14 +184,12 @@ export default function CreateStatusScreen({ navigation }: Props) {
         </View>
 
         {/* ── Step 2: Add Context ── */}
-        <View style={[S.stepRow, { marginTop: spacing.xl }]}>
+        <View style={[S.stepRow, { marginTop: 10 }]}>
           <View style={S.stepBadge}><Text style={S.stepNum}>2</Text></View>
           <Text style={S.stepLabel}>Add Context</Text>
         </View>
 
         <View style={S.contextCard}>
-          <Text style={S.contextHint}>Personalise your update. Use it to share an event or add a caption that captures the mood.</Text>
-
           <TextInput
             style={S.captionInput}
             placeholder="What's happening in the community?"
@@ -219,14 +217,12 @@ export default function CreateStatusScreen({ navigation }: Props) {
         </View>
 
         {/* ── Step 3: Set Visibility & Post ── */}
-        <View style={[S.stepRow, { marginTop: spacing.xl }]}>
+        <View style={[S.stepRow, { marginTop: 10 }]}>
           <View style={S.stepBadge}><Text style={S.stepNum}>3</Text></View>
-          <Text style={S.stepLabel}>Set Visibility & Post</Text>
+          <Text style={S.stepLabel}>Visibility · expires in 48 h</Text>
         </View>
 
         <View style={S.visibilityCard}>
-          <Text style={S.visibilityHint}>Control who sees your post. All posts automatically expire after 48 hours to keep the board fresh.</Text>
-
           <Pressable
             style={[S.visOption, visibility === 'all_neighbors' && S.visOptionActive]}
             onPress={() => setVisibility('all_neighbors')}
@@ -275,186 +271,109 @@ const S = StyleSheet.create({
 
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
     backgroundColor: colors.background,
   },
   headerTitle: { flex: 1 },
-  headerTitleText: { fontSize: 16, fontWeight: '800', color: colors.textPrimary },
-  headerSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2, lineHeight: 17 },
+  headerTitleText: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
+  headerSub: { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
 
-  body: { padding: spacing.lg, paddingBottom: 48 },
+  body: { padding: 10, paddingBottom: 36 },
 
-  // Step row
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   stepBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
   },
-  stepNum: { fontSize: 12, fontWeight: '800', color: '#fff' },
-  stepLabel: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  stepNum: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  stepLabel: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },
 
-  // Preview box
   previewBox: {
-    height: 300,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#2A1E1A',
-    justifyContent: 'flex-end',
+    height: 210, borderRadius: 14, overflow: 'hidden',
+    backgroundColor: '#2A1E1A', justifyContent: 'flex-end',
   },
   previewImage: { ...StyleSheet.absoluteFillObject },
   videoOverlay: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
   captionOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 48,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16,
   },
   captionOverlayText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '800',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
+    color: '#fff', fontSize: 16, fontWeight: '800', textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4,
   },
-  previewPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  previewHint: { fontSize: 13, color: 'rgba(255,255,255,0.35)', fontWeight: '600' },
+  previewPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  previewHint: { fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: '600' },
   captureRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.md,
+    flexDirection: 'row', gap: 6, padding: 8,
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   captureBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 100,
-    paddingVertical: 11,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, backgroundColor: colors.primary, borderRadius: 100, paddingVertical: 8,
   },
   uploadBtn: { backgroundColor: '#fff' },
-  captureBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-  clearMedia: { position: 'absolute', top: 10, right: 10 },
+  captureBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  clearMedia: { position: 'absolute', top: 8, right: 8 },
 
-  // Context card
   contextCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: '#fff', borderRadius: 10, padding: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
-  contextHint: { fontSize: 12, color: colors.textSecondary, lineHeight: 18, marginBottom: spacing.md },
   captionInput: {
-    minHeight: 90,
-    fontSize: 14,
-    color: colors.textPrimary,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.input,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
+    minHeight: 62, fontSize: 13, color: colors.textPrimary,
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.input,
+    padding: 8, marginBottom: 7,
   },
-  chipsScroll: { marginHorizontal: -spacing.sm },
+  chipsScroll: { marginHorizontal: -6 },
   chip: {
-    marginLeft: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 100,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+    marginLeft: 6, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: 100, paddingVertical: 5, paddingHorizontal: 10,
     backgroundColor: colors.card,
   },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 12.5, fontWeight: '600', color: colors.textSecondary },
+  chipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   chipTextActive: { color: '#fff' },
 
-  // Visibility card
   visibilityCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: '#fff', borderRadius: 10, padding: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
-  visibilityHint: { fontSize: 12, color: colors.textSecondary, lineHeight: 18, marginBottom: spacing.md },
   visOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 13,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 12,
-    marginBottom: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingVertical: 8, paddingHorizontal: 8,
+    borderRadius: 8, marginBottom: 5,
+    borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.card,
   },
   visOptionActive: { borderColor: colors.primary, backgroundColor: '#FBF2EB' },
   radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 16, height: 16, borderRadius: 8, borderWidth: 2,
+    borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
   },
   radioActive: { borderColor: colors.primary },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
-  visLabel: { fontSize: 14, fontWeight: '600', color: colors.textSecondary, flex: 1 },
+  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  visLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, flex: 1 },
   visLabelActive: { color: colors.primary },
 
   postBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 100,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
+    backgroundColor: colors.primary, borderRadius: 100,
+    paddingVertical: 11, alignItems: 'center', marginTop: 8, marginBottom: 6,
   },
   postBtnDisabled: { opacity: 0.55 },
-  postBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  postBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
 
-  footer: { alignItems: 'center', paddingTop: spacing.sm, gap: 4 },
-  footerBadge: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 1,
-  },
-  footerText: {
-    fontSize: 11.5,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 17,
-  },
+  footer: { alignItems: 'center', paddingTop: 4, gap: 2 },
+  footerBadge: { fontSize: 9, fontWeight: '800', color: colors.primary, letterSpacing: 1 },
+  footerText: { fontSize: 10.5, color: colors.textSecondary, textAlign: 'center', lineHeight: 15 },
 });

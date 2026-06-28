@@ -143,19 +143,14 @@ export default function AskQuestionScreen({ navigation }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 94 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {/* Tips card */}
         <View style={styles.tipsCard}>
-          <Ionicons name="bulb-outline" size={18} color={colors.success} style={{ marginTop: 2 }} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.tipsTitle}>Tips for a good post</Text>
-            {['Be specific and clear', 'Check for duplicate questions', 'Keep it respectful and helpful'].map((t) => (
-              <Text key={t} style={styles.tipItem}>• {t}</Text>
-            ))}
-          </View>
+          <Ionicons name="bulb-outline" size={14} color={colors.success} />
+          <Text style={styles.tipItem}>Be specific · No duplicates · Stay respectful</Text>
         </View>
 
         {/* Question title */}
@@ -309,182 +304,110 @@ export default function AskQuestionScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
 
-  /* Header */
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 8,
     backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
-  backBtn: { marginRight: spacing.sm },
+  backBtn: { marginRight: 6 },
   headerTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginRight: 32,
+    flex: 1, fontSize: 14, fontWeight: '700', color: colors.textPrimary,
+    textAlign: 'center', marginRight: 28,
   },
 
-  /* Body */
-  body: { padding: spacing.lg, paddingBottom: 40 },
+  body: { padding: 10, paddingBottom: 32 },
 
-  /* Tips */
   tipsCard: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    backgroundColor: colors.successBg,
-    borderRadius: radii.card,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.successBg, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7, marginBottom: 8,
   },
-  tipsTitle: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
-  tipItem: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  tipItem: { fontSize: 11, color: colors.textSecondary, flex: 1 },
 
-  /* Fields */
   label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
+    fontSize: 11, fontWeight: '700', color: colors.textPrimary,
+    marginBottom: 4, marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.3,
   },
   input: {
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.input,
-    padding: 13,
-    fontSize: 14,
-    color: colors.textPrimary,
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: radii.input, paddingHorizontal: 10, paddingVertical: 8,
+    fontSize: 13, color: colors.textPrimary,
   },
-  multiline: { minHeight: 110, textAlignVertical: 'top' },
+  multiline: { minHeight: 70, textAlignVertical: 'top' },
 
-  /* Location */
-  locationRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  locationRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   currentBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderWidth: 1.5,
-    borderColor: colors.success,
-    borderRadius: 100,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1.5, borderColor: colors.success, borderRadius: 100,
+    paddingVertical: 6, paddingHorizontal: 10,
   },
   currentBtnActive: { backgroundColor: colors.success, borderColor: colors.success },
-  currentBtnText: { fontSize: 13, fontWeight: '600', color: colors.success },
+  currentBtnText: { fontSize: 12, fontWeight: '600', color: colors.success },
   currentBtnTextActive: { color: '#fff' },
   locationInput: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.input,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: radii.input, paddingHorizontal: 10, paddingVertical: 7, gap: 5,
   },
-  locationTextInput: { flex: 1, fontSize: 13, color: colors.textPrimary, padding: 0 },
+  locationTextInput: { flex: 1, fontSize: 12, color: colors.textPrimary, padding: 0 },
 
-  /* Media */
-  mediaRow: { flexDirection: 'row', marginTop: 4 },
+  mediaRow: { flexDirection: 'row', marginTop: 2 },
   mediaAdd: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-    backgroundColor: colors.card,
-    gap: 4,
+    width: 64, height: 64, borderRadius: 10,
+    borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 6, backgroundColor: colors.card, gap: 2,
   },
-  mediaAddText: { fontSize: 11, color: colors.textSecondary, fontWeight: '600' },
-  mediaThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginRight: spacing.sm,
-  },
+  mediaAddText: { fontSize: 10, color: colors.textSecondary, fontWeight: '600' },
+  mediaThumbnail: { width: 64, height: 64, borderRadius: 10, overflow: 'hidden', marginRight: 6 },
   mediaImage: { width: '100%', height: '100%' },
   videoOverlay: {
     ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.25)',
   },
   mediaRemove: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    position: 'absolute', top: 3, right: 3,
+    width: 17, height: 17, borderRadius: 9,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
 
-  /* Categories */
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 2 },
   chip: {
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 100,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: 100,
+    paddingVertical: 5, paddingHorizontal: 10, backgroundColor: '#fff',
   },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  chipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   chipTextActive: { color: '#fff' },
 
-  /* Priority */
-  priorityRow: { flexDirection: 'row', gap: spacing.sm, marginTop: 4 },
+  priorityRow: { flexDirection: 'row', gap: 6, marginTop: 2 },
   priorityBtn: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 100,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: '#fff',
+    flex: 1, paddingVertical: 8, borderRadius: 100,
+    alignItems: 'center', borderWidth: 1.5,
+    borderColor: colors.border, backgroundColor: '#fff',
   },
   priorityBtnNormal: { backgroundColor: colors.textPrimary, borderColor: colors.textPrimary },
   priorityBtnUrgent: { backgroundColor: colors.warningBg, borderColor: colors.warningText },
-  priorityText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  priorityText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   priorityTextActive: { color: '#fff' },
   priorityTextUrgent: { color: colors.warningText },
 
-  /* Anonymous */
   anonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.card,
-    borderRadius: radii.card,
-    padding: spacing.md,
-    marginTop: spacing.lg,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.card, borderRadius: radii.card,
+    paddingHorizontal: 10, paddingVertical: 9, marginTop: 8,
   },
-  anonLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  anonTitle: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
-  anonSub: { fontSize: 11.5, color: colors.textSecondary, marginTop: 1 },
+  anonLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  anonTitle: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },
+  anonSub: { fontSize: 10.5, color: colors.textSecondary, marginTop: 1 },
 
-  /* Submit */
   submitBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 100,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: spacing.xl,
+    backgroundColor: colors.primary, borderRadius: 100,
+    paddingVertical: 11, alignItems: 'center', marginTop: 12,
   },
   submitBtnDisabled: { opacity: 0.6 },
-  submitText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  submitText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

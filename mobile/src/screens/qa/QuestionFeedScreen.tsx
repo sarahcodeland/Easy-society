@@ -20,6 +20,7 @@ import { QaStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import { colors } from '../../theme';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 const BRICK = '#8B2E2E';
 
@@ -167,6 +168,7 @@ function QuestionCard({
 
 export default function QuestionFeedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const navPadding = useNavPadding();
   const [questions, setQuestions]   = useState<QuestionRow[]>([]);
   const [tab, setTab]               = useState<TabKey>('recent');
   const [refreshing, setRefreshing] = useState(false);
@@ -190,7 +192,7 @@ export default function QuestionFeedScreen({ navigation }: Props) {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-    apiClient.post(`/qa/questions/${id}/recommend`).catch(() => {});
+    apiClient.post('/qa/recommendations', { target_id: id, target_type: 'question' }).catch(() => {});
   }
 
   const filtered = search.trim()
@@ -245,7 +247,7 @@ export default function QuestionFeedScreen({ navigation }: Props) {
         data={filtered}
         keyExtractor={q => q.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 6, paddingBottom: insets.bottom + 110 }}
+        contentContainerStyle={{ paddingTop: 6, paddingBottom: navPadding }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

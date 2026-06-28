@@ -31,6 +31,8 @@ export type MoreStackParamList = {
   Schemes: undefined;
   Notifications: undefined;
   ComingSoon: { featureTitle: string };
+  CommunityMembers: undefined;
+  UserProfile: { userId: string };
 };
 
 export type StatusStackParamList = {

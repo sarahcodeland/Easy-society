@@ -15,7 +15,7 @@ const createListingSchema = z.object({
   sub_category: z.string().max(80).nullable().optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(5000).nullable().optional(),
-  price: z.number().nonnegative().nullable().optional(),
+  price: z.number().nonnegative().max(9_999_999_999).nullable().optional(),
   contact_info: z.string().max(200).nullable().optional(),
   visibility_level: z.nativeEnum(VisibilityLevel).default(VisibilityLevel.AREA),
   photo_urls: z.array(z.string().url()).max(10).default([]),
@@ -93,25 +93,32 @@ router.post(
     }
 
     const d = body.details ?? {};
+
+    function toNum(v: unknown): number | null {
+      if (v == null || v === '') return null;
+      const n = Number(String(v).replace(/,/g, ''));
+      return isFinite(n) ? n : null;
+    }
+
     if (body.category === ListingCategory.BUY_SELL) {
       await pool.query(
         `INSERT INTO buy_sell_details (listing_id, subcategory, brand, model, year, condition, price_type, extra_details)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
         [listing.id, d.subcategory ?? null, d.brand ?? null, d.model ?? null,
-          d.year ?? null, d.condition ?? null, d.price_type ?? 'fixed', d.extra_details ?? {}],
+          toNum(d.year), d.condition ?? null, d.price_type ?? 'fixed', d.extra_details ?? {}],
       );
     } else if (body.category === ListingCategory.RENT) {
       await pool.query(
         `INSERT INTO rent_details (listing_id, property_type, bedrooms, furnishing, deposit_amount, amenities, available_from, preferred_tenant)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
         [listing.id, d.property_type ?? null, d.bedrooms ?? null, d.furnishing ?? null,
-          d.deposit_amount ?? null, d.amenities ?? [], d.available_from ?? null, d.preferred_tenant ?? 'any'],
+          toNum(d.deposit_amount), d.amenities ?? [], d.available_from ?? null, d.preferred_tenant ?? 'any'],
       );
     } else if (body.category === ListingCategory.SERVICES) {
       await pool.query(
         `INSERT INTO service_details (listing_id, service_type, experience_years, availability, area_coverage, price_type)
          VALUES ($1,$2,$3,$4,$5,$6)`,
-        [listing.id, d.service_type ?? null, d.experience_years ?? null,
+        [listing.id, d.service_type ?? null, toNum(d.experience_years),
           d.availability ?? null, d.area_coverage ?? null, d.price_type ?? null],
       );
     } else if (body.category === ListingCategory.JOBS) {
@@ -119,8 +126,8 @@ router.post(
         `INSERT INTO job_details (listing_id, company_name, job_type, experience_level, salary_min, salary_max, salary_type, is_urgent, openings, skills_required, gender_preference)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [listing.id, d.company_name ?? null, d.job_type ?? null, d.experience_level ?? null,
-          d.salary_min ?? null, d.salary_max ?? null, d.salary_type ?? 'monthly',
-          d.is_urgent ?? false, d.openings ?? 1, d.skills_required ?? [], d.gender_preference ?? 'any'],
+          toNum(d.salary_min), toNum(d.salary_max), d.salary_type ?? 'monthly',
+          d.is_urgent ?? false, toNum(d.openings) ?? 1, d.skills_required ?? [], d.gender_preference ?? 'any'],
       );
     } else if (body.category === ListingCategory.BUSINESSES) {
       await pool.query(

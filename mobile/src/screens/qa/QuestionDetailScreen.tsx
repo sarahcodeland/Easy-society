@@ -163,14 +163,18 @@ export default function QuestionDetailScreen({ route, navigation }: Props) {
   }
 
   async function vote(targetId: string, targetType: 'question' | 'answer', voteType: 'upvote' | 'downvote') {
-    await apiClient.post('/qa/votes', { target_id: targetId, target_type: targetType, vote_type: voteType });
-    load();
+    try {
+      await apiClient.post('/qa/votes', { target_id: targetId, target_type: targetType, vote_type: voteType });
+      load();
+    } catch {}
   }
 
   async function recommend(targetId: string, targetType: 'question' | 'answer') {
-    await apiClient.post('/qa/recommendations', { target_id: targetId, target_type: targetType });
-    Alert.alert('Marked helpful', 'This adds to its credibility score.');
-    load();
+    try {
+      await apiClient.post('/qa/recommendations', { target_id: targetId, target_type: targetType });
+      Alert.alert('Marked helpful', 'This adds to its credibility score.');
+      load();
+    } catch {}
   }
 
   if (!question) return null;

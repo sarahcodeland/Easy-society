@@ -17,6 +17,7 @@ import schemeRoutes from './modules/schemes/routes';
 import moderationRoutes from './modules/moderation/routes';
 import weatherRoutes from './modules/weather/routes';
 import storageRoutes from './modules/storage/routes';
+import communityRoutes from './modules/community/routes';
 
 export function createApp() {
   const app = express();
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/moderation', moderationRoutes);
   app.use('/weather', weatherRoutes);
   app.use('/storage', storageRoutes);
+  app.use('/community', communityRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -6,6 +6,7 @@ import VisitorTag from '../../components/VisitorTag';
 import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { speak } from '../../voice/tts';
 import { useAuthStore } from '../../store/authStore';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 interface AnnouncementRow {
   id: string;
@@ -22,6 +23,7 @@ interface AnnouncementRow {
 }
 
 export default function AnnouncementsScreen() {
+  const navPadding = useNavPadding();
   const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
   const [visibility, setVisibility] = useState<VisibilityLevel>(VisibilityLevel.AREA);
   const [composerVisible, setComposerVisible] = useState(false);
@@ -55,6 +57,7 @@ export default function AnnouncementsScreen() {
       <FlatList
         data={announcements}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: navPadding }}
         renderItem={({ item }) => (
           <View style={[styles.card, item.is_pinned && styles.cardPinned]}>
             {item.is_pinned && <Text style={styles.pinnedLabel}>📌 Pinned</Text>}

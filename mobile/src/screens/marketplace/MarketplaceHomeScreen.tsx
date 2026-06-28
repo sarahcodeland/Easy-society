@@ -21,6 +21,7 @@ import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import { colors, spacing } from '../../theme';
+import { useNavPadding } from '../../hooks/useNavPadding';
 import MarketplaceFiltersModal, {
   MarketplaceFilters,
   MarketplaceTab,
@@ -343,6 +344,7 @@ type Props = NativeStackScreenProps<MarketplaceStackParamList, 'MarketplaceHome'
 
 export default function MarketplaceHomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const navPadding = useNavPadding();
   const [activeTab, setActiveTab] = useState<TabKey>(ListingCategory.BUY_SELL);
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [recent, setRecent] = useState<ListingRow[]>([]);
@@ -525,7 +527,7 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={S.listContent}
+        contentContainerStyle={[S.listContent, { paddingBottom: navPadding }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={ListHeader}
