@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
@@ -26,6 +26,8 @@ import MarketplaceFiltersModal, {
   MarketplaceFilters,
   MarketplaceTab,
   DEFAULT_FILTERS,
+  countActiveFilters,
+  buildApiParams,
 } from './MarketplaceFiltersModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -358,39 +360,12 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
       .catch(() => {});
   }, []);
 
-  const activeFilterCount = useMemo(() => {
-    let n = 0;
-    if (filters.minPrice > 0 || filters.maxPrice < 100000) n++;
-    if (filters.maxDistance !== DEFAULT_FILTERS.maxDistance) n++;
-    if (filters.sortBy !== 'newest') n++;
-    if (filters.propertyTypes.length) n++;
-    if (filters.furnishing.length) n++;
-    if (filters.serviceTypes.length) n++;
-    if (filters.minRating) n++;
-    if (filters.jobTypes.length) n++;
-    if (filters.experience.length) n++;
-    return n;
-  }, [filters]);
+  const activeFilterCount = countActiveFilters(activeTab, filters);
 
   const loadTab = useCallback(async () => {
     if (activeTab === ListingCategory.BUSINESSES) return;
     try {
-      const params: Record<string, unknown> = { category: activeTab };
-      if (filters.minPrice > 0) params.min_price = filters.minPrice;
-      if (filters.maxPrice < 100000) params.max_price = filters.maxPrice;
-      if (filters.sortBy !== 'newest') params.sort = filters.sortBy;
-      if (activeTab === ListingCategory.RENT) {
-        if (filters.propertyTypes.length) params.property_types = filters.propertyTypes.join(',');
-        if (filters.furnishing.length) params.furnishing = filters.furnishing.join(',');
-      }
-      if (activeTab === ListingCategory.SERVICES) {
-        if (filters.serviceTypes.length) params.service_types = filters.serviceTypes.join(',');
-        if (filters.minRating) params.min_rating = filters.minRating;
-      }
-      if (activeTab === ListingCategory.JOBS) {
-        if (filters.jobTypes.length) params.job_types = filters.jobTypes.join(',');
-        if (filters.experience.length) params.experience = filters.experience.join(',');
-      }
+      const params = { category: activeTab, ...buildApiParams(activeTab, filters) };
       const { data } = await apiClient.get('/marketplace/listings', { params });
       setListings(data.listings ?? []);
     } catch {}

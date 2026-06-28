@@ -40,6 +40,7 @@ const C = {
   gray:     '#888888',
   review:   '#555555',
   border:   '#E0E0E0',
+  urgentBg: '#FFF0F0',
 };
 
 const IMG_H    = 220;
@@ -58,6 +59,7 @@ interface Listing {
   title: string; description: string | null; price: number | null;
   contact_info: string | null; created_at: string; is_saved?: boolean;
   author_name: string | null; author_photo: string | null;
+  is_author_verified: boolean;
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -76,11 +78,10 @@ function fmtPrice(price: number | null, category: string) {
   const r = `₹${price.toLocaleString('en-IN')}`;
   if (category === ListingCategory.RENT)     return `${r}/mo`;
   if (category === ListingCategory.SERVICES) return `${r}/hr`;
-  if (category === ListingCategory.JOBS)     return `${r}/mo`;
   return r;
 }
 
-function fmtSub(s: string | null) {
+function fmtSub(s: string | null | undefined) {
   return s ? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : null;
 }
 
@@ -90,43 +91,93 @@ function extractPhone(info: string | null) {
   return m ? m[0].replace(/[\s\-\.]/g, '') : null;
 }
 
-function getSpecs(listing: Listing): Array<{ label: string; value: string }> {
+function fmtTime12(t: string): string {
+  const [h, m] = t.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return m === 0 ? `${h12} ${suffix}` : `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(`${iso}T00:00`).toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+}
+
+function fmtSalaryRange(min: number | null, max: number | null, type: string): string | null {
+  if (!min && !max) return null;
+  const suffix = type === 'daily' ? '/day' : '/mo';
+  const fmt = (n: number) => n >= 1000 ? `₹${Math.round(n / 1000)}K` : `₹${n}`;
+  if (min && max && min !== max) return `${fmt(min)}–${fmt(max)}${suffix}`;
+  return `${fmt(min ?? max!)}${suffix}`;
+}
+
+function fmtTiming(
+  wh: Record<string, { open: string; close: string; closed: boolean }> | null,
+): string {
+  if (!wh) return '—';
+  const first = WH_DAYS.find(d => wh[d] && !wh[d].closed);
+  if (!first) return 'Closed';
+  return `${fmtTime12(wh[first].open)} – ${fmtTime12(wh[first].close)}`;
+}
+
+// ── Specs per category ────────────────────────────────────────────────────────
+
+function getSpecs(listing: Listing, details: any): Array<{ label: string; value: string }> {
   const sub = fmtSub(listing.sub_category);
   switch (listing.category) {
-    case ListingCategory.BUY_SELL:
+    case ListingCategory.BUY_SELL: {
+      const bm = [details?.brand, details?.model].filter(Boolean).join(' ');
       return [
-        { label: 'CATEGORY',   value: sub ?? 'General' },
-        { label: 'CONDITION',  value: 'Good Condition' },
-        { label: 'ASSEMBLY',   value: 'Pre-assembled' },
-        { label: 'NEGOTIABLE', value: 'Yes' },
+        { label: 'CATEGORY',    value: fmtSub(details?.subcategory) ?? sub ?? 'General' },
+        { label: 'CONDITION',   value: fmtSub(details?.condition) ?? '—' },
+        { label: 'BRAND/MODEL', value: bm || '—' },
+        { label: 'YEAR',        value: details?.year ? String(details.year) : '—' },
       ];
+    }
     case ListingCategory.RENT:
       return [
-        { label: 'TYPE',       value: sub ?? 'Property' },
-        { label: 'FURNISHING', value: 'Semi-furnished' },
-        { label: 'AVAILABLE',  value: 'Immediately' },
-        { label: 'DEPOSIT',    value: '2 months' },
+        { label: 'PROPERTY TYPE', value: fmtSub(details?.property_type) ?? '—' },
+        { label: 'BHK',           value: fmtSub(details?.bedrooms) ?? '—' },
+        { label: 'FURNISHING',    value: fmtSub(details?.furnishing) ?? '—' },
+        { label: 'DEPOSIT',       value: details?.deposit_amount
+            ? `₹${Number(details.deposit_amount).toLocaleString('en-IN')}` : 'None' },
       ];
     case ListingCategory.SERVICES:
       return [
-        { label: 'SERVICE',      value: sub ?? 'General' },
-        { label: 'EXPERIENCE',   value: '5+ years' },
-        { label: 'AVAILABILITY', value: 'Mon–Sat' },
-        { label: 'AREA',         value: 'Local Area' },
+        { label: 'SERVICE TYPE',  value: fmtSub(details?.service_type) ?? sub ?? '—' },
+        { label: 'EXPERIENCE',    value: details?.experience_years ? `${details.experience_years}+ yrs` : '—' },
+        { label: 'PRICE TYPE',    value: fmtSub(details?.price_type) ?? '—' },
+        { label: 'AVAILABILITY',  value: details?.availability ?? '—' },
       ];
     case ListingCategory.JOBS:
       return [
-        { label: 'JOB TYPE',   value: sub ?? 'Full-time' },
-        { label: 'EXPERIENCE', value: 'Fresher OK' },
-        { label: 'OPENINGS',   value: '1 position' },
-        { label: 'JOINING',    value: 'Immediately' },
+        { label: 'JOB TYPE',   value: fmtSub(details?.job_type) ?? sub ?? '—' },
+        { label: 'EXPERIENCE', value: fmtSub(details?.experience_level) ?? '—' },
+        { label: 'SALARY',     value: fmtSalaryRange(
+            details?.salary_min, details?.salary_max, details?.salary_type ?? 'monthly',
+          ) ?? '—' },
+        { label: 'OPENINGS',   value: details?.openings
+            ? `${details.openings} position${details.openings > 1 ? 's' : ''}` : '—' },
       ];
+    case ListingCategory.BUSINESSES: {
+      const wh = details?.working_hours ?? null;
+      return [
+        { label: 'CATEGORY',    value: details?.business_category ?? sub ?? '—' },
+        { label: 'ESTABLISHED', value: details?.established_year ? String(details.established_year) : '—' },
+        { label: 'TIMING',      value: fmtTiming(wh) },
+        { label: 'WEBSITE',     value: details?.website ? 'Available' : 'None' },
+      ];
+    }
     default:
       return sub ? [{ label: 'CATEGORY', value: sub }] : [];
   }
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────────
+
+const WH_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 function Divider() {
   return <View style={{ height: 1, backgroundColor: C.divider }} />;
@@ -185,6 +236,140 @@ function Gallery({ photos, isPremium }: { photos: Photo[]; isPremium: boolean })
   );
 }
 
+// ── Category extras (below specs grid) ───────────────────────────────────────
+
+function CategoryExtras({ listing, details }: { listing: Listing; details: any }) {
+  if (!details) return null;
+
+  switch (listing.category) {
+
+    case ListingCategory.BUY_SELL: {
+      const negotiable = details.price_type && details.price_type !== 'fixed';
+      return (
+        <View style={{ marginTop: 10 }}>
+          <View style={negotiable ? D.negPill : D.fixedPill}>
+            <Text style={negotiable ? D.negText : D.fixedText}>
+              {negotiable ? 'NEGOTIABLE' : 'FIXED PRICE'}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    case ListingCategory.RENT: {
+      const amenities: string[] = details.amenities ?? [];
+      return (
+        <View style={D.extras}>
+          {amenities.length > 0 && (
+            <>
+              <Text style={D.extraLabel}>Amenities</Text>
+              <View style={D.pillsRow}>
+                {amenities.map((a, i) => (
+                  <View key={i} style={D.grayPill}>
+                    <Text style={D.grayPillText}>{fmtSub(a) ?? a}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+          <View style={D.extraRow}>
+            <Text style={D.extraKey}>Available From</Text>
+            <Text style={D.extraVal}>{fmtDate(details.available_from)}</Text>
+          </View>
+          {!!details.preferred_tenant && details.preferred_tenant !== 'any' && (
+            <View style={D.extraRow}>
+              <Text style={D.extraKey}>Preferred Tenant</Text>
+              <Text style={D.extraVal}>{fmtSub(details.preferred_tenant)}</Text>
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    case ListingCategory.SERVICES:
+      return (
+        <View style={D.extras}>
+          {!!details.area_coverage && (
+            <View style={D.extraRow}>
+              <Text style={D.extraKey}>Area Coverage</Text>
+              <Text style={D.extraVal}>{details.area_coverage}</Text>
+            </View>
+          )}
+          {listing.is_author_verified && (
+            <View style={D.verifiedSvcPill}>
+              <Text style={D.verifiedSvcText}>✓ Verified Service Provider</Text>
+            </View>
+          )}
+        </View>
+      );
+
+    case ListingCategory.JOBS: {
+      const skills: string[] = details.skills_required ?? [];
+      if (!skills.length) return null;
+      return (
+        <View style={D.extras}>
+          <Text style={D.extraLabel}>Skills Required</Text>
+          <View style={D.pillsRow}>
+            {skills.map((s, i) => (
+              <View key={i} style={D.skillPill}>
+                <Text style={D.skillPillText}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    case ListingCategory.BUSINESSES: {
+      type DayEntry = { open: string; close: string; closed: boolean };
+      const wh = details.working_hours as Record<string, DayEntry> | null;
+      const amenities: string[] = details.amenities ?? [];
+      const mapsUrl = details.address
+        ? `https://maps.google.com/?q=${encodeURIComponent(details.address)}`
+        : null;
+      return (
+        <View style={D.extras}>
+          {wh && (
+            <>
+              <Text style={D.extraLabel}>Working Hours</Text>
+              {WH_DAYS.filter(d => wh[d]).map(d => (
+                <View key={d} style={D.hoursRow}>
+                  <Text style={D.hoursDay}>{d.charAt(0).toUpperCase() + d.slice(1)}</Text>
+                  <Text style={[D.hoursVal, wh[d].closed && { color: C.gray }]}>
+                    {wh[d].closed
+                      ? 'Closed'
+                      : `${fmtTime12(wh[d].open)} – ${fmtTime12(wh[d].close)}`}
+                  </Text>
+                </View>
+              ))}
+            </>
+          )}
+          {amenities.length > 0 && (
+            <>
+              <Text style={[D.extraLabel, wh ? { marginTop: 8 } : undefined]}>Amenities</Text>
+              <View style={D.pillsRow}>
+                {amenities.map((a, i) => (
+                  <View key={i} style={D.grayPill}>
+                    <Text style={D.grayPillText}>{fmtSub(a) ?? a}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+          {mapsUrl && (
+            <TouchableOpacity onPress={() => Linking.openURL(mapsUrl)} activeOpacity={0.7}>
+              <Text style={D.mapLink}>📍  View on Google Maps</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+
+    default:
+      return null;
+  }
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function ListingDetailScreen({ route, navigation }: Props) {
@@ -235,7 +420,7 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
     try {
       await apiClient.post(`/marketplace/listings/${listingId}/comments`, { body: draft.trim() });
       setDraft('');
-      load();
+      void load();
     } catch (e: any) {
       Alert.alert('Error', e.response?.data?.error ?? 'Could not post comment.');
     }
@@ -243,14 +428,15 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
 
   if (!data) return <View style={[D.screen, { paddingTop: insets.top }]} />;
 
-  const { listing, photos, recommendation_count: recCount } = data as {
-    listing: Listing; photos: Photo[]; recommendation_count: number;
+  const { listing, details, photos, recommendation_count: recCount } = data as {
+    listing: Listing; details: any; photos: Photo[]; recommendation_count: number;
   };
 
   const phone     = extractPhone(listing.contact_info);
   const price     = fmtPrice(listing.price, listing.category);
-  const specs     = getSpecs(listing);
+  const specs     = getSpecs(listing, details);
   const isPremium = recCount >= 3;
+  const isUrgent  = listing.category === ListingCategory.JOBS && details?.is_urgent;
 
   return (
     <View style={[D.screen, { paddingTop: insets.top }]}>
@@ -278,18 +464,18 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
       {/* ── Scrollable body ── */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: navPadding + 60 }}>
 
-        {/* Gallery */}
         <Gallery photos={photos} isPremium={isPremium} />
 
-        {/* ── Price + title ── */}
+        {/* ── Title + price ── */}
         <View style={D.sec}>
           <View style={D.titleRow}>
             <Text style={D.titleText} numberOfLines={2}>{listing.title}</Text>
             {price != null && <Text style={D.priceText}>{price}</Text>}
           </View>
-          {listing.price != null && (
+          {/* URGENT badge: jobs only, shown below title above specs */}
+          {isUrgent && (
             <View style={{ marginTop: 5 }}>
-              <View style={D.negPill}><Text style={D.negText}>NEGOTIABLE</Text></View>
+              <View style={D.urgentPill}><Text style={D.urgentText}>🔥 Urgent Hiring</Text></View>
             </View>
           )}
           <View style={D.metaRow}>
@@ -301,18 +487,19 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
 
         <Divider />
 
-        {/* ── Key details grid ── */}
+        {/* ── Specs grid + category-specific extras ── */}
         {specs.length > 0 && (
           <>
             <View style={D.sec}>
               <View style={D.grid}>
-                {specs.slice(0, 4).map((s, i) => (
+                {specs.map((s, i) => (
                   <View key={i} style={D.cell}>
                     <Text style={D.cellLabel}>{s.label}</Text>
                     <Text style={D.cellVal} numberOfLines={2}>{s.value}</Text>
                   </View>
                 ))}
               </View>
+              <CategoryExtras listing={listing} details={details} />
             </View>
             <Divider />
           </>
@@ -499,10 +686,16 @@ const D = StyleSheet.create({
   titleRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   titleText: { flex: 1, fontSize: 18, fontWeight: '700', color: C.text, lineHeight: 24 },
   priceText: { fontSize: 20, fontWeight: '800', color: C.brick, flexShrink: 0 },
-  negPill:   { alignSelf: 'flex-start', backgroundColor: C.greenBg, borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3 },
-  negText:   { fontSize: 10, fontWeight: '700', color: C.green },
   metaRow:   { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   metaTxt:   { fontSize: 12, color: C.gray },
+
+  // ── Title-area pills
+  negPill:   { alignSelf: 'flex-start', backgroundColor: C.greenBg, borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3 },
+  negText:   { fontSize: 10, fontWeight: '700', color: C.green },
+  fixedPill: { alignSelf: 'flex-start', backgroundColor: C.gridBg, borderRadius: 4, paddingHorizontal: 7, paddingVertical: 3 },
+  fixedText: { fontSize: 10, fontWeight: '700', color: C.gray },
+  urgentPill:{ alignSelf: 'flex-start', backgroundColor: C.urgentBg, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#FFCCCC' },
+  urgentText:{ fontSize: 10, fontWeight: '700', color: '#CC0000' },
 
   // ── Details grid
   grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: CELL_GAP },
@@ -510,21 +703,42 @@ const D = StyleSheet.create({
   cellLabel: { fontSize: 9, fontWeight: '700', color: C.gray, letterSpacing: 0.5, marginBottom: 3 },
   cellVal:   { fontSize: 13, fontWeight: '700', color: C.text },
 
+  // ── Category extras
+  extras:        { marginTop: 10, gap: 6 },
+  extraLabel:    { fontSize: 11, fontWeight: '700', color: C.gray, letterSpacing: 0.3, marginBottom: 4 },
+  extraRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  extraKey:      { fontSize: 12, color: C.gray },
+  extraVal:      { fontSize: 12, fontWeight: '600', color: C.text },
+  pillsRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  grayPill:      { backgroundColor: C.gridBg, borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 },
+  grayPillText:  { fontSize: 11, fontWeight: '600', color: C.body },
+  skillPill:     { borderWidth: 1, borderColor: C.brick, borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 },
+  skillPillText: { fontSize: 11, fontWeight: '600', color: C.brick },
+  verifiedSvcPill: {
+    alignSelf: 'flex-start', backgroundColor: C.greenBg, borderRadius: 100,
+    paddingHorizontal: 12, paddingVertical: 5,
+  },
+  verifiedSvcText: { fontSize: 11, fontWeight: '700', color: C.green },
+  hoursRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
+  hoursDay: { width: 32, fontSize: 12, fontWeight: '600', color: C.text },
+  hoursVal: { fontSize: 12, color: C.body },
+  mapLink:  { fontSize: 13, fontWeight: '600', color: C.brick, marginTop: 4 },
+
   // ── Description
   descText: { fontSize: 13, color: C.body, lineHeight: 19 },
   readMore:  { fontSize: 12, fontWeight: '600', color: C.brick, marginTop: 4 },
 
   // ── Seller card
-  sellerCard:     { backgroundColor: C.sellerBg, borderRadius: 10, padding: 12 },
-  sellerRow:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sellerAva:      { width: 40, height: 40, borderRadius: 20 },
-  sellerNameRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  sellerName:     { fontSize: 13, fontWeight: '700', color: C.text, flexShrink: 1 },
-  verBadge:       { backgroundColor: C.greenBg, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
-  verText:        { fontSize: 9, fontWeight: '700', color: C.green },
-  viewProfile:    { fontSize: 12, fontWeight: '600', color: C.brick },
-  sellerRating:   { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
-  sellerRatingTxt:{ fontSize: 12, color: C.gray },
+  sellerCard:      { backgroundColor: C.sellerBg, borderRadius: 10, padding: 12 },
+  sellerRow:       { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sellerAva:       { width: 40, height: 40, borderRadius: 20 },
+  sellerNameRow:   { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  sellerName:      { fontSize: 13, fontWeight: '700', color: C.text, flexShrink: 1 },
+  verBadge:        { backgroundColor: C.greenBg, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
+  verText:         { fontSize: 9, fontWeight: '700', color: C.green },
+  viewProfile:     { fontSize: 12, fontWeight: '600', color: C.brick },
+  sellerRating:    { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
+  sellerRatingTxt: { fontSize: 12, color: C.gray },
 
   // ── Reviews
   reviewsHead:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },

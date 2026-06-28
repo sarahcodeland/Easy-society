@@ -148,29 +148,54 @@ router.get(
   optionalAuth,
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
-    const listing = await pool.query(
-      `SELECT l.*, u.name AS author_name, u.profile_photo_url AS author_photo
+    const listingResult = await pool.query(
+      `SELECT l.*, u.name AS author_name, u.profile_photo_url AS author_photo,
+              u.is_verified AS is_author_verified
        FROM listings l LEFT JOIN users u ON u.id = l.user_id
        WHERE l.id = $1 AND l.is_deleted = false`,
       [id],
     );
-    if (!listing.rows[0]) throw new ApiError(404, 'Listing not found');
+    if (!listingResult.rows[0]) throw new ApiError(404, 'Listing not found');
 
-    const photos = await pool.query(
-      'SELECT id, photo_url, order_index FROM listing_photos WHERE listing_id = $1 ORDER BY order_index',
-      [id],
-    );
-    const reactions = await pool.query(
-      `SELECT reaction_type, COUNT(*) AS count FROM listing_reactions WHERE listing_id = $1 GROUP BY reaction_type`,
-      [id],
-    );
-    const recommendationCount = await pool.query(
-      'SELECT COUNT(*) AS count FROM listing_recommendations WHERE listing_id = $1',
-      [id],
-    );
+    const cat = listingResult.rows[0].category as ListingCategory;
+    const detailTableMap: Record<string, string> = {
+      [ListingCategory.BUY_SELL]:   'buy_sell_details',
+      [ListingCategory.RENT]:       'rent_details',
+      [ListingCategory.SERVICES]:   'service_details',
+      [ListingCategory.JOBS]:       'job_details',
+      [ListingCategory.BUSINESSES]: 'business_listing_details',
+    };
+    const detailTable = detailTableMap[cat];
+
+    const baseQueries = [
+      pool.query(
+        'SELECT id, photo_url, order_index FROM listing_photos WHERE listing_id = $1 ORDER BY order_index',
+        [id],
+      ),
+      pool.query(
+        `SELECT reaction_type, COUNT(*) AS count FROM listing_reactions WHERE listing_id = $1 GROUP BY reaction_type`,
+        [id],
+      ),
+      pool.query(
+        'SELECT COUNT(*) AS count FROM listing_recommendations WHERE listing_id = $1',
+        [id],
+      ),
+    ] as const;
+
+    const [photos, reactions, recommendationCount] = await Promise.all(baseQueries);
+
+    let details = null;
+    if (detailTable) {
+      const detailResult = await pool.query(
+        `SELECT * FROM ${detailTable} WHERE listing_id = $1`,
+        [id],
+      );
+      details = detailResult.rows[0] ?? null;
+    }
 
     res.json({
-      listing: listing.rows[0],
+      listing: listingResult.rows[0],
+      details,
       photos: photos.rows,
       reactions: reactions.rows,
       recommendation_count: Number(recommendationCount.rows[0].count),
