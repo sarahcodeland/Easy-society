@@ -17,8 +17,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
+import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { colors, spacing } from '../../theme';
 import { useNavPadding } from '../../hooks/useNavPadding';
+import { useLocationStore } from '../../store/locationStore';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_MX = 16;
@@ -171,15 +173,18 @@ function StatusCard({ item, onView }: { item: StatusRow; onView: (s: StatusRow) 
 export default function StatusFeedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const navPadding = useNavPadding();
+  const { activeLocationId, visibilityLevel } = useLocationStore();
   const [statuses, setStatuses] = useState<StatusRow[]>([]);
   const [viewing, setViewing]   = useState<StatusRow | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const { data } = await apiClient.get('/statuses/feed');
+      const { data } = await apiClient.get('/statuses/feed', {
+        params: { location_id: activeLocationId, visibility_level: visibilityLevel },
+      });
       setStatuses(data.statuses ?? []);
     } catch {}
-  }, []);
+  }, [activeLocationId, visibilityLevel]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -198,6 +203,8 @@ export default function StatusFeedScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      <VisibilityFilterBar />
 
       {/* ── Feed ── */}
       <FlatList
@@ -281,7 +288,7 @@ const S = StyleSheet.create({
   tint: { backgroundColor: 'rgba(0,0,0,0.10)' },
   bottomGrad: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: CARD_H * 0.60,
+    height: CARD_H * 0.30,
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   textBg: {

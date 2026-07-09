@@ -22,6 +22,7 @@ import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import { colors, spacing, radii } from '../../theme';
 import DateTimePickerField from '../../components/DateTimePickerField';
+import { useLocationStore } from '../../store/locationStore';
 
 type Props = NativeStackScreenProps<MarketplaceStackParamList, 'CreateListing'>;
 
@@ -431,6 +432,7 @@ const CATEGORY_CONFIG: Record<CategoryKey, { title: string; showPhotos: boolean;
 export default function CreateListingScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
+  const { activeLocationId } = useLocationStore();
 
   const initialCategory = (route.params?.category ?? 'buy_sell') as CategoryKey;
   const [activeCategory, setActiveCategory] = useState<CategoryKey>(initialCategory);
@@ -483,6 +485,7 @@ export default function CreateListingScreen({ route, navigation }: Props) {
         title: title.trim(),
         description: description.trim() || null,
         contact_info: contactInfo.trim() || null,
+        location_id: activeLocationId,
         visibility_level: VisibilityLevel.AREA,
         photo_urls: photoUrls,
         details,

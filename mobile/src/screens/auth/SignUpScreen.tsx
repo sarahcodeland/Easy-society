@@ -38,7 +38,6 @@ export default function SignUpScreen({ navigation }: Props) {
   const [state, setState] = useState<Location | null>(null);
   const [district, setDistrict] = useState<Location | null>(null);
   const [city, setCity] = useState<Location | null>(null);
-  const [mandal, setMandal] = useState<Location | null>(null);
   const [area, setArea] = useState<Location | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -152,7 +151,6 @@ export default function SignUpScreen({ navigation }: Props) {
             setState(loc);
             setDistrict(null);
             setCity(null);
-            setMandal(null);
             setArea(null);
           }}
         />
@@ -164,7 +162,6 @@ export default function SignUpScreen({ navigation }: Props) {
           onChange={(loc) => {
             setDistrict(loc);
             setCity(null);
-            setMandal(null);
             setArea(null);
           }}
         />
@@ -175,24 +172,13 @@ export default function SignUpScreen({ navigation }: Props) {
           value={city}
           onChange={(loc) => {
             setCity(loc);
-            setMandal(null);
-            setArea(null);
-          }}
-        />
-        <LocationCascadePicker
-          label={t('auth.selectMandal')}
-          parentId={city?.id ?? null}
-          disabled={!city}
-          value={mandal}
-          onChange={(loc) => {
-            setMandal(loc);
             setArea(null);
           }}
         />
         <LocationCascadePicker
           label={t('auth.selectArea')}
-          parentId={mandal?.id ?? null}
-          disabled={!mandal}
+          parentId={city?.id ?? null}
+          disabled={!city}
           value={area}
           onChange={setArea}
         />

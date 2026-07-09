@@ -5,8 +5,10 @@ import { ChatStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import Badge from '../../components/Badge';
+import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { colors, spacing } from '../../theme';
 import { useNavPadding } from '../../hooks/useNavPadding';
+import { useLocationStore } from '../../store/locationStore';
 
 interface ChatGroupRow {
   id: string;
@@ -20,22 +22,26 @@ type Props = NativeStackScreenProps<ChatStackParamList, 'ChatList'>;
 
 export default function ChatListScreen({ navigation }: Props) {
   const navPadding = useNavPadding();
+  const { activeLocationId, visibilityLevel } = useLocationStore();
   const [groups, setGroups] = useState<ChatGroupRow[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const { data } = await apiClient.get('/chat/groups/mine');
+    const { data } = await apiClient.get('/chat/groups/mine', {
+      params: { location_id: activeLocationId, visibility_level: visibilityLevel },
+    });
     setGroups(data.groups);
-  }, []);
+  }, [activeLocationId, visibilityLevel]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   return (
-    <FlatList
-      style={styles.flex}
-      data={groups}
+    <View style={styles.flex}>
+      <VisibilityFilterBar />
+      <FlatList
+        data={groups}
       keyExtractor={(item) => item.id}
       contentContainerStyle={{ paddingBottom: navPadding }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
@@ -52,12 +58,13 @@ export default function ChatListScreen({ navigation }: Props) {
           {item.is_moderator && <Badge label="Moderator" />}
         </TouchableOpacity>
       )}
-    />
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { backgroundColor: colors.background },
+  flex: { flex: 1, backgroundColor: colors.background },
   row: { padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card },
   rowInfo: { flex: 1, marginLeft: spacing.md },
   groupName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },

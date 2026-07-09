@@ -14,7 +14,6 @@ export default function ProfileSetupScreen() {
   const [state, setState] = useState<Location | null>(null);
   const [district, setDistrict] = useState<Location | null>(null);
   const [city, setCity] = useState<Location | null>(null);
-  const [mandal, setMandal] = useState<Location | null>(null);
   const [area, setArea] = useState<Location | null>(null);
   const [loading, setLoading] = useState(false);
   const updateUser = useAuthStore((s) => s.updateUser);
@@ -55,33 +54,26 @@ export default function ProfileSetupScreen() {
         label={t('auth.selectState')}
         parentId={null}
         value={state}
-        onChange={(loc) => { setState(loc); setDistrict(null); setCity(null); setMandal(null); setArea(null); }}
+        onChange={(loc) => { setState(loc); setDistrict(null); setCity(null); setArea(null); }}
       />
       <LocationCascadePicker
         label={t('auth.selectDistrict')}
         parentId={state?.id ?? null}
         disabled={!state}
         value={district}
-        onChange={(loc) => { setDistrict(loc); setCity(null); setMandal(null); setArea(null); }}
+        onChange={(loc) => { setDistrict(loc); setCity(null); setArea(null); }}
       />
       <LocationCascadePicker
         label={t('auth.selectCity')}
         parentId={district?.id ?? null}
         disabled={!district}
         value={city}
-        onChange={(loc) => { setCity(loc); setMandal(null); setArea(null); }}
-      />
-      <LocationCascadePicker
-        label={t('auth.selectMandal')}
-        parentId={city?.id ?? null}
-        disabled={!city}
-        value={mandal}
-        onChange={(loc) => { setMandal(loc); setArea(null); }}
+        onChange={(loc) => { setCity(loc); setArea(null); }}
       />
       <LocationCascadePicker
         label={t('auth.selectArea')}
-        parentId={mandal?.id ?? null}
-        disabled={!mandal}
+        parentId={city?.id ?? null}
+        disabled={!city}
         value={area}
         onChange={setArea}
       />

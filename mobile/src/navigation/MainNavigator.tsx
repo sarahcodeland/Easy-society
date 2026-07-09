@@ -36,6 +36,7 @@ import NotificationsScreen from '../screens/more/NotificationsScreen';
 import ComingSoonScreen from '../screens/phase2/ComingSoonScreen';
 import CommunityMembersScreen from '../screens/community/CommunityMembersScreen';
 import UserProfileScreen from '../screens/community/UserProfileScreen';
+import MyProfileScreen from '../screens/community/MyProfileScreen';
 
 const Tabs = createBottomTabNavigator<MainTabParamList>();
 const ChatStack = createNativeStackNavigator<ChatStackParamList>();
@@ -292,6 +293,7 @@ function MoreStackNavigator() {
       <MoreStack.Screen name="ComingSoon" component={ComingSoonScreen} />
       <MoreStack.Screen name="CommunityMembers" component={CommunityMembersScreen} />
       <MoreStack.Screen name="UserProfile" component={UserProfileScreen} />
+      <MoreStack.Screen name="MyProfile" component={MyProfileScreen} />
     </MoreStack.Navigator>
   );
 }

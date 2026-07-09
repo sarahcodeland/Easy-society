@@ -29,6 +29,8 @@ import MarketplaceFiltersModal, {
   countActiveFilters,
   buildApiParams,
 } from './MarketplaceFiltersModal';
+import VisibilityFilterBar from '../../components/VisibilityFilterBar';
+import { useLocationStore } from '../../store/locationStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -347,6 +349,7 @@ type Props = NativeStackScreenProps<MarketplaceStackParamList, 'MarketplaceHome'
 export default function MarketplaceHomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const navPadding = useNavPadding();
+  const { activeLocationId, visibilityLevel } = useLocationStore();
   const [activeTab, setActiveTab] = useState<TabKey>(ListingCategory.BUY_SELL);
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [recent, setRecent] = useState<ListingRow[]>([]);
@@ -355,21 +358,28 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    apiClient.get('/marketplace/listings')
+    apiClient.get('/marketplace/listings', {
+      params: { location_id: activeLocationId, visibility_level: visibilityLevel },
+    })
       .then(({ data }) => setRecent((data.listings ?? []).slice(0, 10)))
       .catch(() => {});
-  }, []);
+  }, [activeLocationId, visibilityLevel]);
 
   const activeFilterCount = countActiveFilters(activeTab, filters);
 
   const loadTab = useCallback(async () => {
     if (activeTab === ListingCategory.BUSINESSES) return;
     try {
-      const params = { category: activeTab, ...buildApiParams(activeTab, filters) };
+      const params = {
+        category: activeTab,
+        location_id: activeLocationId,
+        visibility_level: visibilityLevel,
+        ...buildApiParams(activeTab, filters),
+      };
       const { data } = await apiClient.get('/marketplace/listings', { params });
       setListings(data.listings ?? []);
     } catch {}
-  }, [activeTab, filters]);
+  }, [activeTab, filters, activeLocationId, visibilityLevel]);
 
   useFocusEffect(useCallback(() => { loadTab(); }, [loadTab]));
 
@@ -484,6 +494,8 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
           );
         })}
       </ScrollView>
+
+      <VisibilityFilterBar />
 
       {/* ── Section heading ── */}
       {activeTab !== 'businesses' && (

@@ -2,15 +2,21 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../theme';
+import { useAuthStore } from '../store/authStore';
 
 interface Props {
   isVisitor?: boolean;
   visitorLocationLabel?: string | null;
+  postLocationId?: string | null;
 }
 
-export default function VisitorTag({ isVisitor, visitorLocationLabel }: Props) {
+export default function VisitorTag({ isVisitor, visitorLocationLabel, postLocationId }: Props) {
   const { t } = useTranslation();
-  if (!isVisitor) return null;
+  const userLocationId = useAuthStore((s) => s.user?.location_id);
+
+  // API-computed isVisitor takes priority; fall back to client-side comparison
+  const show = isVisitor ?? (postLocationId != null && postLocationId !== userLocationId);
+  if (!show) return null;
 
   return (
     <View style={styles.pill}>

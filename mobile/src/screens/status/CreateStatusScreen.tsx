@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
+import { useLocationStore } from '../../store/locationStore';
 import { colors, spacing, radii } from '../../theme';
 
 type Props = NativeStackScreenProps<StatusStackParamList, 'CreateStatus'>;
@@ -28,6 +29,7 @@ const QUICK_CAPTIONS = ['Village Fest! 🎉', 'Community First 💪', 'Neighbors
 
 export default function CreateStatusScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { activeLocationId } = useLocationStore();
   const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [mediaMime, setMediaMime] = useState('image/jpeg');
   const [isVideo, setIsVideo] = useState(false);
@@ -105,6 +107,7 @@ export default function CreateStatusScreen({ navigation }: Props) {
         media_type: mediaType,
         content_url: contentUrl,
         text_content: caption.trim() || null,
+        location_id: activeLocationId,
         visibility,
       });
 

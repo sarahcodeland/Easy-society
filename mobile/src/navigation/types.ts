@@ -33,6 +33,7 @@ export type MoreStackParamList = {
   ComingSoon: { featureTitle: string };
   CommunityMembers: undefined;
   UserProfile: { userId: string };
+  MyProfile: undefined;
 };
 
 export type StatusStackParamList = {

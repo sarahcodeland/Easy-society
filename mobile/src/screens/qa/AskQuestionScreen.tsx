@@ -21,6 +21,7 @@ import { VisibilityLevel } from '@easysociety/shared';
 import { QaStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
+import { useLocationStore } from '../../store/locationStore';
 import Avatar from '../../components/Avatar';
 import { colors, radii, spacing } from '../../theme';
 
@@ -37,6 +38,7 @@ interface MediaAsset {
 export default function AskQuestionScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
+  const { activeLocationId } = useLocationStore();
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -111,6 +113,7 @@ export default function AskQuestionScreen({ navigation }: Props) {
       await apiClient.post('/qa/questions', {
         title: title.trim(),
         body: body.trim() || null,
+        location_id: activeLocationId,
         visibility_level: visibility,
         location_tag: locationTag.trim() || null,
         media_urls: mediaUrls.length > 0 ? mediaUrls : undefined,

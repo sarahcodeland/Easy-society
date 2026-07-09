@@ -19,8 +19,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QaStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
+import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { colors } from '../../theme';
 import { useNavPadding } from '../../hooks/useNavPadding';
+import { useLocationStore } from '../../store/locationStore';
 
 const BRICK = '#8B2E2E';
 
@@ -169,6 +171,7 @@ function QuestionCard({
 export default function QuestionFeedScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const navPadding = useNavPadding();
+  const { activeLocationId, visibilityLevel } = useLocationStore();
   const [questions, setQuestions]   = useState<QuestionRow[]>([]);
   const [tab, setTab]               = useState<TabKey>('recent');
   const [refreshing, setRefreshing] = useState(false);
@@ -178,11 +181,15 @@ export default function QuestionFeedScreen({ navigation }: Props) {
   const load = useCallback(async (t: TabKey) => {
     try {
       const { data } = await apiClient.get('/qa/questions', {
-        params: { sort: t === 'trending' ? 'top' : 'recent' },
+        params: {
+          sort: t === 'trending' ? 'top' : 'recent',
+          location_id: activeLocationId,
+          visibility_level: visibilityLevel,
+        },
       });
       setQuestions(data.questions ?? []);
     } catch {}
-  }, []);
+  }, [activeLocationId, visibilityLevel]);
 
   useFocusEffect(useCallback(() => { load(tab); }, [load, tab]));
 
@@ -241,6 +248,8 @@ export default function QuestionFeedScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
       </View>
+
+      <VisibilityFilterBar />
 
       {/* ── Feed ── */}
       <FlatList

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuthStore } from '../store/authStore';
 import { colors, spacing } from '../theme';
+import { navigationRef } from '../navigation/navigationRef';
 
 const DRAWER_WIDTH = Math.min(Dimensions.get('window').width * 0.8, 320);
 
@@ -90,7 +91,15 @@ export default function Sidebar() {
     {
       title: 'PERSONAL',
       items: [
-        { icon: 'person-outline', label: 'My Profile' },
+        {
+          icon: 'person-outline',
+          label: 'My Profile',
+          onPress: () => {
+            if (navigationRef.isReady()) {
+              (navigationRef as any).navigate('MoreTab', { screen: 'MyProfile' });
+            }
+          },
+        },
         { icon: 'stats-chart-outline', label: 'My Activity' },
         { icon: 'bookmark-outline', label: 'Saved Posts' },
         { icon: 'bag-handle-outline', label: 'My Orders / Listings' },

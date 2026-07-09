@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuthStore } from '../store/authStore';
 import { colors, spacing } from '../theme';
+import { navigationRef } from '../navigation/navigationRef';
 
 export default function AppHeader() {
   const { open } = useSidebar();
@@ -46,9 +47,17 @@ export default function AppHeader() {
           >
             <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
           </Pressable>
-          <View style={styles.avatar}>
+          <Pressable
+            onPress={() => {
+              if (navigationRef.isReady()) {
+                (navigationRef as any).navigate('MoreTab', { screen: 'MyProfile' });
+              }
+            }}
+            style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.75 }]}
+            hitSlop={8}
+          >
             <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          </Pressable>
         </View>
       </View>
     </View>
