@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { VisibilityLevel } from '@easysociety/shared';
 import { apiClient } from '../../api/client';
 import VisitorTag from '../../components/VisitorTag';
-import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { speak } from '../../voice/tts';
 import { useAuthStore } from '../../store/authStore';
+import { useLocationStore } from '../../store/locationStore';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 interface AnnouncementRow {
   id: string;
@@ -22,24 +22,31 @@ interface AnnouncementRow {
 }
 
 export default function AnnouncementsScreen() {
+  const navPadding = useNavPadding();
   const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
-  const [visibility, setVisibility] = useState<VisibilityLevel>(VisibilityLevel.AREA);
   const [composerVisible, setComposerVisible] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const { user, } = useAuthStore();
+  const { user } = useAuthStore();
+  const { activeLocationId, visibilityLevel } = useLocationStore();
   const language = user?.preferred_language ?? 'en';
 
   const load = useCallback(async () => {
-    const { data } = await apiClient.get('/announcements', { params: { visibility } });
+    const { data } = await apiClient.get('/announcements', {
+      params: { visibility: visibilityLevel, location_id: activeLocationId },
+    });
     setAnnouncements(data.announcements);
-  }, [visibility]);
+  }, [visibilityLevel, activeLocationId]);
 
   useEffect(() => { load(); }, [load]);
 
   async function submit() {
     try {
-      await apiClient.post('/announcements', { title: title.trim(), body: body.trim() || null, visibility_level: visibility });
+      await apiClient.post('/announcements', {
+        title: title.trim(),
+        body: body.trim() || null,
+        visibility_level: visibilityLevel,
+      });
       setComposerVisible(false);
       setTitle('');
       setBody('');
@@ -51,10 +58,10 @@ export default function AnnouncementsScreen() {
 
   return (
     <View style={styles.flex}>
-      <VisibilityFilterBar value={visibility} onChange={setVisibility} />
       <FlatList
         data={announcements}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: navPadding }}
         renderItem={({ item }) => (
           <View style={[styles.card, item.is_pinned && styles.cardPinned]}>
             {item.is_pinned && <Text style={styles.pinnedLabel}>📌 Pinned</Text>}

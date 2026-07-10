@@ -35,7 +35,7 @@ router.get(
               (SELECT photo_url FROM business_photos p WHERE p.business_id = b.id ORDER BY order_index LIMIT 1) AS cover_photo_url,
               COALESCE((SELECT AVG(rating) FROM business_reviews r WHERE r.business_id = b.id), 0) AS avg_rating
        FROM businesses b
-       WHERE b.is_deleted = false AND b.location_id = $1 AND ($2 IS NULL OR b.category = $2)
+       WHERE b.is_deleted = false AND b.location_id = $1 AND ($2::text IS NULL OR b.category = $2::text)
        ORDER BY b.is_verified DESC, b.created_at DESC LIMIT 50`,
       [locationId, category],
     );

@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useAuthStore } from '../store/authStore';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+import { navigationRef } from './navigationRef';
 
 export default function RootNavigator() {
   const { token, user, isHydrating, hydrate } = useAuthStore();
@@ -23,7 +24,7 @@ export default function RootNavigator() {
   const isFullyOnboarded = !!token && !!user?.location_id;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {isFullyOnboarded ? <MainNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

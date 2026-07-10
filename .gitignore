@@ -77,13 +77,23 @@ mobile/**/fastlane/report.xml
 mobile/**/fastlane/Preview.html
 mobile/**/fastlane/screenshots/
 mobile/**/fastlane/test_output/
-
+mobile/package-lock.json
 # Bundle artifacts / native module install caches
 mobile/.cxx/
 mobile/.expo/
 
+# ===== Lock files =====
+package-lock.json
+**/package-lock.json
+
+# ===== Markdown files =====
+*.md
+**/*.md
+
 # ===== Backend (backend/) =====
 backend/dist/
+backend/node_modules/
+
 
 # ===== Coverage / test artifacts =====
 coverage/

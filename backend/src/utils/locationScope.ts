@@ -3,7 +3,7 @@ import { pool } from '../db/pool';
 
 export interface LocationAncestry {
   area_id: string | null;
-  mandal_id: string | null;
+  city_id: string | null;
   district_id: string | null;
   state_id: string | null;
 }
@@ -25,11 +25,11 @@ export async function getAncestry(locationId: string): Promise<LocationAncestry>
   );
 
   const ancestry: LocationAncestry = {
-    area_id: null, mandal_id: null, district_id: null, state_id: null,
+    area_id: null, city_id: null, district_id: null, state_id: null,
   };
   for (const row of rows) {
     if (row.type === 'area') ancestry.area_id = row.id;
-    if (row.type === 'mandal') ancestry.mandal_id = row.id;
+    if (row.type === 'city') ancestry.city_id = row.id;
     if (row.type === 'district') ancestry.district_id = row.id;
     if (row.type === 'state') ancestry.state_id = row.id;
   }
@@ -52,7 +52,7 @@ export async function resolveVisibleScope(
   // area at that same breadth.
   const candidates = [
     { level: VisibilityLevel.AREA, id: ancestry.area_id },
-    { level: VisibilityLevel.MANDAL, id: ancestry.mandal_id },
+    { level: VisibilityLevel.CITY, id: ancestry.city_id },
     { level: VisibilityLevel.DISTRICT, id: ancestry.district_id },
     { level: VisibilityLevel.STATE, id: ancestry.state_id },
   ];
@@ -66,4 +66,50 @@ export async function resolveVisibleScope(
     includeNational: filterIndex >= VISIBILITY_LEVEL_ORDER.indexOf(VisibilityLevel.NATIONAL),
     maxLevel: filterLevel,
   };
+}
+
+// Every "area" has exactly one community (chat_groups.location_id is
+// 1:1 with an area — see migration 0003). Unlike resolveVisibleScope
+// (which walks *up* from the viewer's area to decide if a single piece of
+// content is visible), this walks *down* from the filter's scope root to
+// list every sibling community within it — e.g. filterLevel=city returns
+// every area's community under the viewer's city, not just their own.
+const MAX_AREAS_IN_SCOPE = 200;
+
+export async function getAreaIdsInScope(
+  viewerAreaLocationId: string,
+  filterLevel: VisibilityLevel,
+): Promise<string[]> {
+  if (filterLevel === VisibilityLevel.AREA) {
+    return [viewerAreaLocationId];
+  }
+
+  const ancestry = await getAncestry(viewerAreaLocationId);
+  const rootId =
+    filterLevel === VisibilityLevel.CITY ? ancestry.city_id :
+    filterLevel === VisibilityLevel.DISTRICT ? ancestry.district_id :
+    filterLevel === VisibilityLevel.STATE ? ancestry.state_id :
+    null; // national — no root, every area nationwide is in scope
+
+  if (!rootId && filterLevel !== VisibilityLevel.NATIONAL) {
+    return [viewerAreaLocationId];
+  }
+
+  const { rows } = rootId
+    ? await pool.query<{ id: string }>(
+        `WITH RECURSIVE descendants AS (
+           SELECT id, type, parent_id FROM locations WHERE id = $1
+           UNION ALL
+           SELECT l.id, l.type, l.parent_id
+           FROM locations l JOIN descendants d ON l.parent_id = d.id
+         )
+         SELECT id FROM descendants WHERE type = 'area' LIMIT $2`,
+        [rootId, MAX_AREAS_IN_SCOPE],
+      )
+    : await pool.query<{ id: string }>(
+        `SELECT id FROM locations WHERE type = 'area' LIMIT $1`,
+        [MAX_AREAS_IN_SCOPE],
+      );
+
+  return rows.map((r) => r.id);
 }

@@ -1,27 +1,65 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { VisibilityLevel } from '@easysociety/shared';
 import { pool } from '../../db/pool';
 import { asyncHandler, ApiError } from '../../middleware/errorHandler';
 import { requireAuth } from '../../middleware/auth';
 import { redis } from '../../config/redis';
 import { assertMember, getOlderMessages, getRecentMessages } from './service';
 import { attachVisitorTags } from '../../utils/visitorTag';
+import { getAreaIdsInScope } from '../../utils/locationScope';
 
 const router = Router();
 
+// GET /chat/groups/mine?location_id=&visibility_level=area — like Q&A and
+// Marketplace, broadening visibility_level surfaces other communities'
+// groups (not just ones already joined) within that scope; is_member tells
+// the client whether to show "Open" or "Join".
 router.get(
   '/groups/mine',
   requireAuth,
   asyncHandler(async (req, res) => {
+    const locationId = req.query.location_id ? z.string().uuid().parse(req.query.location_id) : null;
+    const filterLevel = z.nativeEnum(VisibilityLevel).default(VisibilityLevel.AREA).parse(req.query.visibility_level);
+
+    const areaIds = locationId ? await getAreaIdsInScope(locationId, filterLevel) : null;
+
     const { rows } = await pool.query(
-      `SELECT g.id, g.location_id, g.name, m.is_moderator, m.joined_at
-       FROM chat_group_members m
-       JOIN chat_groups g ON g.id = m.group_id
-       WHERE m.user_id = $1
-       ORDER BY m.joined_at`,
-      [req.auth!.userId],
+      areaIds
+        ? `SELECT g.id, g.location_id, g.name, m.is_moderator, m.joined_at,
+                  (m.user_id IS NOT NULL) AS is_member
+           FROM chat_groups g
+           LEFT JOIN chat_group_members m ON m.group_id = g.id AND m.user_id = $1
+           WHERE g.location_id = ANY($2::uuid[])
+           ORDER BY is_member DESC, m.joined_at NULLS LAST, g.name
+           LIMIT 200`
+        : `SELECT g.id, g.location_id, g.name, m.is_moderator, m.joined_at, true AS is_member
+           FROM chat_group_members m
+           JOIN chat_groups g ON g.id = m.group_id
+           WHERE m.user_id = $1
+           ORDER BY m.joined_at`,
+      areaIds ? [req.auth!.userId, areaIds] : [req.auth!.userId],
     );
     res.json({ groups: rows });
+  }),
+);
+
+// POST /chat/groups/:groupId/join — lets a user join a community they
+// browsed to via a broadened filter but aren't yet a member of.
+router.post(
+  '/groups/:groupId/join',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const groupId = z.string().uuid().parse(req.params.groupId);
+    const group = await pool.query('SELECT id FROM chat_groups WHERE id = $1', [groupId]);
+    if (!group.rows[0]) throw new ApiError(404, 'Chat group not found');
+
+    await pool.query(
+      `INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2)
+       ON CONFLICT (group_id, user_id) DO NOTHING`,
+      [groupId, req.auth!.userId],
+    );
+    res.status(201).json({ ok: true });
   }),
 );
 
@@ -90,6 +128,33 @@ router.post(
       [messageId, req.auth!.userId, reason],
     );
     res.status(201).json({ report_id: rows[0].id });
+  }),
+);
+
+// Share any content type (status/listing/question/answer) into a chat group.
+// Creates a chat_shares record; the client renders it as a rich preview card
+// inside the chat thread.
+router.post(
+  '/shares',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const shareSchema = z.object({
+      group_id:    z.string().uuid(),
+      target_type: z.enum(['status', 'listing', 'question', 'answer']),
+      target_id:   z.string().uuid(),
+      message:     z.string().max(500).optional(),
+    });
+    const body = shareSchema.parse(req.body);
+
+    await assertMember(body.group_id, req.auth!.userId);
+
+    const { rows } = await pool.query(
+      `INSERT INTO chat_shares (sender_id, group_id, target_type, target_id, message)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, sender_id, group_id, target_type, target_id, message, created_at`,
+      [req.auth!.userId, body.group_id, body.target_type, body.target_id, body.message ?? null],
+    );
+    res.status(201).json({ share: rows[0] });
   }),
 );
 

@@ -7,13 +7,13 @@ import { createPresignedUpload } from '../../services/storage/storageService';
 const router = Router();
 
 const presignSchema = z.object({
-  prefix: z.enum(['chat', 'status', 'listing', 'business', 'profile']),
+  prefix: z.enum(['chat', 'status', 'listing', 'business', 'profile', 'qa']),
   content_type: z.string().regex(/^(image|video|audio)\/[a-zA-Z0-9.+-]+$/),
 });
 
 // POST /storage/presigned-upload — clients call this first, PUT the file
-// bytes directly to the returned uploadUrl, then use publicUrl (served via
-// Cloudflare CDN) when creating the message/status/listing/etc.
+// bytes directly to the returned uploadUrl (a Supabase Storage signed upload
+// URL), then use publicUrl when creating the message/status/listing/etc.
 router.post(
   '/presigned-upload',
   requireAuth,

@@ -72,4 +72,69 @@ router.post(
   }),
 );
 
+router.get(
+  '/:userId/profile',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const userId = z.string().uuid().parse(req.params.userId);
+
+    const { rows: userRows } = await pool.query(
+      `SELECT
+         u.id, u.name AS full_name, u.profile_photo_url, u.is_verified, u.created_at,
+         l.name AS area_name,
+         (SELECT COUNT(*)::int FROM answers a
+           WHERE a.user_id = u.id AND a.is_deleted = false)          AS answers_count,
+         (SELECT COUNT(*)::int FROM qa_recommendations r
+            JOIN answers a2 ON a2.id = r.target_id
+           WHERE a2.user_id = u.id AND r.target_type = 'answer')     AS helpful_count,
+         (SELECT COUNT(*)::int FROM listings li
+           WHERE li.user_id = u.id
+             AND li.is_deleted = false AND li.is_active = true)      AS listings_count
+       FROM users u
+       LEFT JOIN locations l ON l.id = u.location_id
+       WHERE u.id = $1 AND u.is_deleted = false`,
+      [userId],
+    );
+    if (!userRows[0]) throw new ApiError(404, 'User not found');
+
+    const { rows: listings } = await pool.query(
+      `SELECT l.id, l.title, l.price, l.category, l.created_at,
+              (SELECT photo_url FROM listing_photos p
+                WHERE p.listing_id = l.id ORDER BY order_index LIMIT 1) AS cover_photo
+       FROM listings l
+       WHERE l.user_id = $1 AND l.is_deleted = false AND l.is_active = true
+       ORDER BY l.created_at DESC LIMIT 6`,
+      [userId],
+    );
+
+    const { rows: answers } = await pool.query(
+      `SELECT a.id, a.body, a.created_at,
+              q.title AS question_title, q.id AS question_id,
+              (SELECT COUNT(*)::int FROM qa_recommendations r
+                WHERE r.target_id = a.id AND r.target_type = 'answer') AS helpful_count
+       FROM answers a
+       JOIN questions q ON q.id = a.question_id
+       WHERE a.user_id = $1 AND a.is_deleted = false AND q.is_deleted = false
+       ORDER BY a.created_at DESC LIMIT 10`,
+      [userId],
+    );
+
+    const { rows: skillRows } = await pool.query(
+      `SELECT DISTINCT sd.service_type AS skill
+       FROM service_details sd
+       JOIN listings l ON l.id = sd.listing_id
+       WHERE l.user_id = $1 AND l.is_deleted = false AND l.is_active = true
+         AND sd.service_type IS NOT NULL`,
+      [userId],
+    );
+
+    res.json({
+      user:     userRows[0],
+      listings,
+      answers,
+      skills:   skillRows.map((r: any) => r.skill),
+    });
+  }),
+);
+
 export default router;

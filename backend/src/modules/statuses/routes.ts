@@ -11,6 +11,7 @@ const createStatusSchema = z.object({
   media_type: z.nativeEnum(StatusMediaType),
   content_url: z.string().url().nullable().optional(),
   text_content: z.string().max(1000).nullable().optional(),
+  visibility: z.enum(['all_neighbors', 'close_only']).default('all_neighbors'),
 });
 
 router.post(
@@ -25,10 +26,10 @@ router.post(
     if (!me.rows[0]?.location_id) throw new ApiError(400, 'Complete your profile/location first');
 
     const { rows } = await pool.query(
-      `INSERT INTO statuses (user_id, location_id, media_type, content_url, text_content, expires_at)
-       VALUES ($1, $2, $3, $4, $5, now() + interval '${STATUS_EXPIRY_HOURS} hours')
-       RETURNING id, user_id, location_id, media_type, content_url, text_content, expires_at, created_at`,
-      [req.auth!.userId, me.rows[0].location_id, body.media_type, body.content_url ?? null, body.text_content ?? null],
+      `INSERT INTO statuses (user_id, location_id, media_type, content_url, text_content, visibility, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, now() + interval '${STATUS_EXPIRY_HOURS} hours')
+       RETURNING id, user_id, location_id, media_type, content_url, text_content, visibility, expires_at, created_at`,
+      [req.auth!.userId, me.rows[0].location_id, body.media_type, body.content_url ?? null, body.text_content ?? null, body.visibility],
     );
     res.status(201).json({ status: rows[0] });
   }),
@@ -45,11 +46,34 @@ router.get(
     if (!locationId) throw new ApiError(400, 'Complete your profile/location first');
 
     const { rows } = await pool.query(
-      `SELECT s.id, s.user_id, s.media_type, s.content_url, s.text_content, s.expires_at, s.created_at,
-              u.name AS author_name, u.profile_photo_url AS author_photo
+      `SELECT s.id, s.user_id, s.media_type, s.content_url, s.text_content, s.visibility,
+              s.expires_at, s.created_at,
+              u.name AS author_name, u.profile_photo_url AS author_photo,
+              l.name AS location_label,
+              COALESCE(lk.count, 0)  AS like_count,
+              COALESCE(v.count, 0)   AS view_count,
+              COALESCE(cm.count, 0)  AS comment_count,
+              COALESCE(rp.count, 0)  AS repost_count
        FROM statuses s
        JOIN users u ON u.id = s.user_id
-       WHERE s.location_id = $1 AND s.is_deleted = false AND s.expires_at > now()
+       LEFT JOIN locations l ON l.id = u.location_id
+       LEFT JOIN (
+         SELECT status_id, COUNT(*) AS count FROM status_likes GROUP BY status_id
+       ) lk ON lk.status_id = s.id
+       LEFT JOIN (
+         SELECT status_id, COUNT(*) AS count FROM status_views GROUP BY status_id
+       ) v ON v.status_id = s.id
+       LEFT JOIN (
+         SELECT status_id, COUNT(*) AS count
+         FROM status_comments WHERE is_deleted = false GROUP BY status_id
+       ) cm ON cm.status_id = s.id
+       LEFT JOIN (
+         SELECT status_id, COUNT(*) AS count FROM status_reposts GROUP BY status_id
+       ) rp ON rp.status_id = s.id
+       WHERE s.location_id = $1
+         AND s.is_deleted = false
+         AND s.expires_at > now()
+         AND (s.visibility = 'all_neighbors')
          AND s.user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE blocker_user_id = $2)
        ORDER BY s.created_at DESC`,
       [locationId, req.auth!.userId],
@@ -92,6 +116,125 @@ router.get(
     res.json({ viewers: rows });
   }),
 );
+
+router.post(
+  '/:id/like',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    await pool.query(
+      `INSERT INTO status_likes (status_id, user_id) VALUES ($1, $2)
+       ON CONFLICT (status_id, user_id) DO NOTHING`,
+      [id, req.auth!.userId],
+    );
+    res.status(201).json({ ok: true });
+  }),
+);
+
+router.delete(
+  '/:id/like',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    await pool.query(
+      'DELETE FROM status_likes WHERE status_id = $1 AND user_id = $2',
+      [id, req.auth!.userId],
+    );
+    res.json({ ok: true });
+  }),
+);
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+
+router.post(
+  '/:id/comments',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    const body = z.string().min(1).max(2000).parse(req.body.body);
+    const parentCommentId = req.body.parent_comment_id
+      ? z.string().uuid().parse(req.body.parent_comment_id)
+      : null;
+
+    const { rows } = await pool.query(
+      `INSERT INTO status_comments (status_id, user_id, parent_comment_id, body)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, status_id, user_id, parent_comment_id, body, created_at`,
+      [statusId, req.auth!.userId, parentCommentId, body],
+    );
+    res.status(201).json({ comment: rows[0] });
+  }),
+);
+
+router.get(
+  '/:id/comments',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    const { rows } = await pool.query(
+      `SELECT c.id, c.status_id, c.user_id, c.parent_comment_id, c.body, c.created_at,
+              u.name AS author_name, u.profile_photo_url AS author_photo
+       FROM status_comments c
+       LEFT JOIN users u ON u.id = c.user_id
+       WHERE c.status_id = $1 AND c.is_deleted = false
+       ORDER BY c.created_at ASC`,
+      [statusId],
+    );
+    res.json({ comments: rows });
+  }),
+);
+
+// ── Reposts ───────────────────────────────────────────────────────────────────
+
+router.post(
+  '/:id/reposts',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    const caption = req.body.caption
+      ? z.string().max(500).parse(req.body.caption)
+      : null;
+
+    await pool.query(
+      `INSERT INTO status_reposts (status_id, user_id, caption)
+       VALUES ($1, $2, $3) ON CONFLICT (user_id, status_id) DO NOTHING`,
+      [statusId, req.auth!.userId, caption],
+    );
+    res.status(201).json({ ok: true });
+  }),
+);
+
+router.delete(
+  '/:id/reposts',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    await pool.query(
+      'DELETE FROM status_reposts WHERE status_id = $1 AND user_id = $2',
+      [statusId, req.auth!.userId],
+    );
+    res.json({ ok: true });
+  }),
+);
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+
+router.post(
+  '/:id/reports',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const statusId = z.string().uuid().parse(req.params.id);
+    const reason = z.string().min(1).max(1000).parse(req.body.reason);
+    await pool.query(
+      `INSERT INTO status_reports (status_id, reporter_id, reason)
+       VALUES ($1, $2, $3) ON CONFLICT (reporter_id, status_id) DO NOTHING`,
+      [statusId, req.auth!.userId, reason],
+    );
+    res.status(201).json({ ok: true });
+  }),
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 router.delete(
   '/:id',

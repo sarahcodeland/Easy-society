@@ -2,12 +2,13 @@
 // Keep these in sync with the database — they are the single source of truth
 // for fixed-value columns shared between backend and mobile.
 
+// Matches exactly the four levels collected from the user at signup
+// (state -> district -> city -> area). No "mandal" — that was leftover
+// terminology from an old sample seed with no corresponding real data.
 export const LocationType = {
   STATE: 'state',
   DISTRICT: 'district',
   CITY: 'city',
-  VILLAGE: 'village',
-  MANDAL: 'mandal',
   AREA: 'area',
 } as const;
 export type LocationType = (typeof LocationType)[keyof typeof LocationType];
@@ -28,7 +29,7 @@ export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 
 export const VisibilityLevel = {
   AREA: 'area',
-  MANDAL: 'mandal',
+  CITY: 'city',
   DISTRICT: 'district',
   STATE: 'state',
   NATIONAL: 'national',
@@ -37,9 +38,10 @@ export type VisibilityLevel = (typeof VisibilityLevel)[keyof typeof VisibilityLe
 
 // Order matters: index = how "wide" the visibility is. Used to check
 // whether a user's expanded filter level includes a given piece of content.
+// Mirrors the real location hierarchy (area -> city -> district -> state).
 export const VISIBILITY_LEVEL_ORDER: VisibilityLevel[] = [
   VisibilityLevel.AREA,
-  VisibilityLevel.MANDAL,
+  VisibilityLevel.CITY,
   VisibilityLevel.DISTRICT,
   VisibilityLevel.STATE,
   VisibilityLevel.NATIONAL,
@@ -136,4 +138,4 @@ export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 export const MIN_ACCOUNT_AGE_DAYS_FOR_ANNOUNCEMENTS = 7;
 
 // Stories/status auto-expiry window.
-export const STATUS_EXPIRY_HOURS = 24;
+export const STATUS_EXPIRY_HOURS = 48;

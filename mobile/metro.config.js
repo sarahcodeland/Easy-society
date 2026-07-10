@@ -1,4 +1,5 @@
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+const { getDefaultConfig } = require('expo/metro-config');
+const { mergeConfig } = require('metro-config');
 const path = require('path');
 
 // Watches the monorepo's /shared package so changes there hot-reload too.

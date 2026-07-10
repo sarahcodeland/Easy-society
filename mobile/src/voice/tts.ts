@@ -1,4 +1,4 @@
-import Tts from 'react-native-tts';
+import * as Speech from 'expo-speech';
 
 const LANGUAGE_TO_LOCALE: Record<string, string> = {
   en: 'en-IN',
@@ -14,16 +14,9 @@ const LANGUAGE_TO_LOCALE: Record<string, string> = {
 // language so literacy isn't a barrier to using the app.
 export async function speak(text: string, languageCode: string): Promise<void> {
   const locale = LANGUAGE_TO_LOCALE[languageCode] ?? 'en-IN';
-  try {
-    await Tts.setDefaultLanguage(locale);
-  } catch {
-    // Falls back to device default voice if the requested locale's voice
-    // pack isn't installed — better to speak in the wrong accent than not
-    // speak at all.
-  }
-  Tts.speak(text);
+  Speech.speak(text, { language: locale });
 }
 
 export function stopSpeaking(): void {
-  Tts.stop();
+  Speech.stop();
 }

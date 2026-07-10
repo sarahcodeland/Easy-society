@@ -15,10 +15,15 @@ const createQuestionSchema = z.object({
   title: z.string().min(3).max(300),
   body: z.string().max(5000).nullable().optional(),
   visibility_level: z.nativeEnum(VisibilityLevel).default(VisibilityLevel.AREA),
+  media_urls: z.array(z.string().url()).max(5).optional(),
+  categories: z.array(z.string()).optional(),
+  priority: z.enum(['normal', 'urgent']).optional(),
+  is_anonymous: z.boolean().optional(),
+  location_tag: z.string().max(200).nullable().optional(),
 });
 
 // GET /qa/questions?visibility=area — defaults to the viewer's registered
-// area; pass a wider visibility (mandal/district/state/national) to expand,
+// area; pass a wider visibility (city/district/state/national) to expand,
 // per "filter to expand visibility" requirement.
 router.get(
   '/questions',
@@ -36,7 +41,7 @@ router.get(
     }
 
     const { rows } = await pool.query(
-      `SELECT q.id, q.user_id, q.location_id, q.visibility_level, q.title, q.body, q.created_at,
+      `SELECT q.id, q.user_id, q.location_id, q.visibility_level, q.title, q.body, q.media_urls, q.created_at,
               u.name AS author_name, u.profile_photo_url AS author_photo,
               COALESCE(v.score, 0) AS vote_score,
               COALESCE(r.count, 0) AS recommendation_count,
@@ -74,10 +79,10 @@ router.post(
     if (!me.rows[0]?.location_id) throw new ApiError(400, 'Complete your profile/location first');
 
     const { rows } = await pool.query(
-      `INSERT INTO questions (user_id, location_id, visibility_level, title, body)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, user_id, location_id, visibility_level, title, body, created_at`,
-      [req.auth!.userId, me.rows[0].location_id, body.visibility_level, body.title, body.body ?? null],
+      `INSERT INTO questions (user_id, location_id, visibility_level, title, body, media_urls)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, user_id, location_id, visibility_level, title, body, media_urls, created_at`,
+      [req.auth!.userId, me.rows[0].location_id, body.visibility_level, body.title, body.body ?? null, body.media_urls ?? []],
     );
     await invalidate('qa:feed', true);
     res.status(201).json({ question: rows[0] });
@@ -149,6 +154,46 @@ router.delete(
     }
     await pool.query('UPDATE questions SET is_deleted = true WHERE id = $1', [id]);
     res.json({ ok: true });
+  }),
+);
+
+// ── Answer comments ───────────────────────────────────────────────────────────
+
+router.post(
+  '/answers/:id/comments',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const answerId = z.string().uuid().parse(req.params.id);
+    const body = z.string().min(1).max(2000).parse(req.body.body);
+    const parentCommentId = req.body.parent_comment_id
+      ? z.string().uuid().parse(req.body.parent_comment_id)
+      : null;
+
+    const { rows } = await pool.query(
+      `INSERT INTO qa_comments (answer_id, user_id, parent_comment_id, body)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, answer_id, user_id, parent_comment_id, body, created_at`,
+      [answerId, req.auth!.userId, parentCommentId, body],
+    );
+    res.status(201).json({ comment: rows[0] });
+  }),
+);
+
+router.get(
+  '/answers/:id/comments',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const answerId = z.string().uuid().parse(req.params.id);
+    const { rows } = await pool.query(
+      `SELECT c.id, c.answer_id, c.user_id, c.parent_comment_id, c.body, c.created_at,
+              u.name AS author_name, u.profile_photo_url AS author_photo
+       FROM qa_comments c
+       LEFT JOIN users u ON u.id = c.user_id
+       WHERE c.answer_id = $1 AND c.is_deleted = false
+       ORDER BY c.created_at ASC`,
+      [answerId],
+    );
+    res.json({ comments: rows });
   }),
 );
 

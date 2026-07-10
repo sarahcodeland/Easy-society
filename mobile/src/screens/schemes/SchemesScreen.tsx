@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../api/client';
+import { useNavPadding } from '../../hooks/useNavPadding';
 
 interface SchemeRow {
   id: string;
@@ -15,6 +16,7 @@ interface SchemeRow {
 // data via the backend sync job. No edit affordances anywhere in this screen.
 export default function SchemesScreen() {
   const { i18n } = useTranslation();
+  const navPadding = useNavPadding();
   const [schemes, setSchemes] = useState<SchemeRow[]>([]);
 
   useEffect(() => {
@@ -25,6 +27,7 @@ export default function SchemesScreen() {
     <FlatList
       data={schemes}
       keyExtractor={(item) => item.id}
+      contentContainerStyle={{ paddingBottom: navPadding }}
       ListEmptyComponent={<Text style={styles.empty}>No schemes synced yet for this language/region.</Text>}
       renderItem={({ item }) => (
         <View style={styles.card}>

@@ -1,6 +1,7 @@
 export type AuthStackParamList = {
-  PhoneEntry: undefined;
-  OtpVerify: { phoneNumber: string };
+  ChooseLanguage: { next?: 'Login' | 'SignUp' };
+  Login: undefined;
+  SignUp: undefined;
   ProfileSetup: undefined;
 };
 
@@ -18,7 +19,7 @@ export type QaStackParamList = {
 export type MarketplaceStackParamList = {
   MarketplaceHome: undefined;
   ListingDetail: { listingId: string };
-  CreateListing: undefined;
+  CreateListing: { category: string };
   BusinessDirectory: undefined;
   BusinessDetail: { businessId: string };
   CreateBusiness: undefined;
@@ -30,6 +31,14 @@ export type MoreStackParamList = {
   Schemes: undefined;
   Notifications: undefined;
   ComingSoon: { featureTitle: string };
+  CommunityMembers: undefined;
+  UserProfile: { userId: string };
+  MyProfile: undefined;
+};
+
+export type StatusStackParamList = {
+  StatusFeed: undefined;
+  CreateStatus: undefined;
 };
 
 export type MainTabParamList = {
