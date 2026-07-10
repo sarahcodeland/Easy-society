@@ -133,7 +133,7 @@ export default function AskQuestionScreen({ navigation }: Props) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.flex, { paddingTop: insets.top }]}
+      style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header */}

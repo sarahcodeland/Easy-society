@@ -7,7 +7,7 @@ import { cached } from '../../utils/cache';
 const router = Router();
 
 // GET /locations/children?parent_id=&type=state
-// Used by the cascading state -> district -> city/village -> mandal -> area
+// Used by the cascading state -> district -> city -> area
 // pickers on signup. Top-level call omits parent_id to list states.
 router.get(
   '/children',

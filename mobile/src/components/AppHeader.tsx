@@ -1,16 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigationState } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuthStore } from '../store/authStore';
 import { colors, spacing } from '../theme';
 import { navigationRef } from '../navigation/navigationRef';
+import GlobalFiltersModal from './GlobalFiltersModal';
 
 export default function AppHeader() {
   const { open } = useSidebar();
   const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const [filtersVisible, setFiltersVisible] = useState(false);
+
+  // Sub-screens (pushed within a tab's stack, e.g. ListingDetail, ChatRoom)
+  // already have their own back-button header — showing the profile avatar
+  // here too is a redundant second "go to my profile" affordance on top of it.
+  const isSubScreen = useNavigationState((state) => {
+    const tabRoute = state?.routes[state.index];
+    const nestedState = tabRoute?.state;
+    return !!nestedState && nestedState.index! > 0;
+  });
 
   const initials = (user?.name ?? 'U')
     .split(' ')
@@ -39,27 +51,40 @@ export default function AppHeader() {
           <Text style={styles.subtitle}>Village</Text>
         </View>
 
-        {/* Bell + Avatar */}
+        {/* Filter + Bell + Avatar */}
         <View style={styles.rightSlot}>
+          {!isSubScreen && (
+            <Pressable
+              onPress={() => setFiltersVisible(true)}
+              style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+              hitSlop={8}
+            >
+              <Ionicons name="options-outline" size={22} color={colors.textPrimary} />
+            </Pressable>
+          )}
           <Pressable
             style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
             hitSlop={8}
           >
             <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Pressable
-            onPress={() => {
-              if (navigationRef.isReady()) {
-                (navigationRef as any).navigate('MoreTab', { screen: 'MyProfile' });
-              }
-            }}
-            style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.75 }]}
-            hitSlop={8}
-          >
-            <Text style={styles.avatarText}>{initials}</Text>
-          </Pressable>
+          {!isSubScreen && (
+            <Pressable
+              onPress={() => {
+                if (navigationRef.isReady()) {
+                  (navigationRef as any).navigate('MoreTab', { screen: 'MyProfile' });
+                }
+              }}
+              style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.75 }]}
+              hitSlop={8}
+            >
+              <Text style={styles.avatarText}>{initials}</Text>
+            </Pressable>
+          )}
         </View>
       </View>
+
+      <GlobalFiltersModal visible={filtersVisible} onClose={() => setFiltersVisible(false)} />
     </View>
   );
 }

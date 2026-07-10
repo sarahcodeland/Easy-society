@@ -29,7 +29,6 @@ import MarketplaceFiltersModal, {
   countActiveFilters,
   buildApiParams,
 } from './MarketplaceFiltersModal';
-import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { useLocationStore } from '../../store/locationStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -406,14 +405,9 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
   const ListHeader = (
     <View>
       {/* ── Header ── */}
-      <View style={[S.header, { paddingTop: insets.top + 8 }]}>
-        <View>
-          <Text style={S.headerLocation}>📍 Your Community</Text>
-          <Text style={S.headerTitle}>Marketplace</Text>
-        </View>
-        <TouchableOpacity style={S.bellBtn} hitSlop={8}>
-          <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
+      <View style={S.header}>
+        <Text style={S.headerLocation}>📍 Your Community</Text>
+        <Text style={S.headerTitle}>Marketplace</Text>
       </View>
 
       {/* ── Search + Filter ── */}
@@ -495,8 +489,6 @@ export default function MarketplaceHomeScreen({ navigation }: Props) {
         })}
       </ScrollView>
 
-      <VisibilityFilterBar />
-
       {/* ── Section heading ── */}
       {activeTab !== 'businesses' && (
         <View style={S.sectionRow}>
@@ -565,22 +557,13 @@ const S = StyleSheet.create({
 
   // Header
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
     backgroundColor: colors.background,
   },
   headerLocation: { fontSize: 11.5, color: colors.textSecondary, fontWeight: '600' },
   headerTitle: { fontSize: 22, fontWeight: '800', color: colors.textPrimary, marginTop: 1 },
-  bellBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    marginTop: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
-  },
 
   // Search
   searchRow: {

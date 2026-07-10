@@ -23,7 +23,7 @@ const createQuestionSchema = z.object({
 });
 
 // GET /qa/questions?visibility=area — defaults to the viewer's registered
-// area; pass a wider visibility (mandal/district/state/national) to expand,
+// area; pass a wider visibility (city/district/state/national) to expand,
 // per "filter to expand visibility" requirement.
 router.get(
   '/questions',

@@ -19,9 +19,14 @@ interface Props {
   disabled?: boolean;
   value: Location | null;
   onChange: (location: Location) => void;
+  // Filters out rows whose `type` doesn't match this cascade step — the
+  // locations table has stray non-'area' rows nested where 'area' rows are
+  // expected (leftover dev seed data colliding with the LGD import), which
+  // would otherwise show up as selectable and fail registration downstream.
+  expectedType?: LocationType;
 }
 
-export default function LocationCascadePicker({ label, parentId, disabled, value, onChange }: Props) {
+export default function LocationCascadePicker({ label, parentId, disabled, value, onChange, expectedType }: Props) {
   const [options, setOptions] = useState<Location[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,10 +38,12 @@ export default function LocationCascadePicker({ label, parentId, disabled, value
     setError(false);
     apiClient
       .get('/locations/children', { params: parentId ? { parent_id: parentId } : {} })
-      .then(({ data }) => setOptions(data.locations ?? []))
+      .then(({ data }) => setOptions(
+        expectedType ? (data.locations ?? []).filter((l: Location) => l.type === expectedType) : data.locations ?? [],
+      ))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [parentId, disabled]);
+  }, [parentId, disabled, expectedType]);
 
   return (
     <View style={styles.wrapper}>
@@ -80,7 +87,9 @@ export default function LocationCascadePicker({ label, parentId, disabled, value
                   setLoading(true);
                   apiClient
                     .get('/locations/children', { params: parentId ? { parent_id: parentId } : {} })
-                    .then(({ data }) => setOptions(data.locations ?? []))
+                    .then(({ data }) => setOptions(
+                      expectedType ? (data.locations ?? []).filter((l: Location) => l.type === expectedType) : data.locations ?? [],
+                    ))
                     .catch(() => setError(true))
                     .finally(() => setLoading(false));
                 }}

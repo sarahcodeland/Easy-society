@@ -426,7 +426,7 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
     }
   }
 
-  if (!data) return <View style={[D.screen, { paddingTop: insets.top }]} />;
+  if (!data) return <View style={D.screen} />;
 
   const { listing, details, photos, recommendation_count: recCount } = data as {
     listing: Listing; details: any; photos: Photo[]; recommendation_count: number;
@@ -439,7 +439,7 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
   const isUrgent  = listing.category === ListingCategory.JOBS && details?.is_urgent;
 
   return (
-    <View style={[D.screen, { paddingTop: insets.top }]}>
+    <View style={D.screen}>
 
       {/* ── Sticky header ── */}
       <View style={D.header}>

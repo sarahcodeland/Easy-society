@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { apiClient } from '../../api/client';
 import VisitorTag from '../../components/VisitorTag';
-import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { speak } from '../../voice/tts';
 import { useAuthStore } from '../../store/authStore';
 import { useLocationStore } from '../../store/locationStore';
@@ -59,7 +58,6 @@ export default function AnnouncementsScreen() {
 
   return (
     <View style={styles.flex}>
-      <VisibilityFilterBar />
       <FlatList
         data={announcements}
         keyExtractor={(item) => item.id}

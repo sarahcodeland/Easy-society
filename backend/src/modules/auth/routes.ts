@@ -52,6 +52,12 @@ router.post(
 
     const loc = await pool.query('SELECT type FROM locations WHERE id = $1', [location_id]);
     if (loc.rows.length === 0 || loc.rows[0].type !== 'area') {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `/auth/register rejected location_id=${location_id} — ${
+          loc.rows.length === 0 ? 'no such location' : `type is "${loc.rows[0].type}", not "area"`
+        }`,
+      );
       throw new ApiError(400, 'location_id must reference a location of type "area"');
     }
 

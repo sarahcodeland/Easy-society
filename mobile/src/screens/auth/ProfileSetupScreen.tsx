@@ -53,6 +53,7 @@ export default function ProfileSetupScreen() {
       <LocationCascadePicker
         label={t('auth.selectState')}
         parentId={null}
+        expectedType="state"
         value={state}
         onChange={(loc) => { setState(loc); setDistrict(null); setCity(null); setArea(null); }}
       />
@@ -60,6 +61,7 @@ export default function ProfileSetupScreen() {
         label={t('auth.selectDistrict')}
         parentId={state?.id ?? null}
         disabled={!state}
+        expectedType="district"
         value={district}
         onChange={(loc) => { setDistrict(loc); setCity(null); setArea(null); }}
       />
@@ -67,6 +69,7 @@ export default function ProfileSetupScreen() {
         label={t('auth.selectCity')}
         parentId={district?.id ?? null}
         disabled={!district}
+        expectedType="city"
         value={city}
         onChange={(loc) => { setCity(loc); setArea(null); }}
       />
@@ -74,6 +77,7 @@ export default function ProfileSetupScreen() {
         label={t('auth.selectArea')}
         parentId={city?.id ?? null}
         disabled={!city}
+        expectedType="area"
         value={area}
         onChange={setArea}
       />

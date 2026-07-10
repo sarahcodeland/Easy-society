@@ -146,6 +146,7 @@ export default function SignUpScreen({ navigation }: Props) {
         <LocationCascadePicker
           label={t('auth.selectState')}
           parentId={null}
+          expectedType="state"
           value={state}
           onChange={(loc) => {
             setState(loc);
@@ -158,6 +159,7 @@ export default function SignUpScreen({ navigation }: Props) {
           label={t('auth.selectDistrict')}
           parentId={state?.id ?? null}
           disabled={!state}
+          expectedType="district"
           value={district}
           onChange={(loc) => {
             setDistrict(loc);
@@ -169,6 +171,7 @@ export default function SignUpScreen({ navigation }: Props) {
           label={t('auth.selectCity')}
           parentId={district?.id ?? null}
           disabled={!district}
+          expectedType="city"
           value={city}
           onChange={(loc) => {
             setCity(loc);
@@ -179,6 +182,7 @@ export default function SignUpScreen({ navigation }: Props) {
           label={t('auth.selectArea')}
           parentId={city?.id ?? null}
           disabled={!city}
+          expectedType="area"
           value={area}
           onChange={setArea}
         />

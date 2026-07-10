@@ -512,7 +512,7 @@ export default function CreateListingScreen({ route, navigation }: Props) {
 
   return (
     <KeyboardAvoidingView
-      style={[U.flex, { paddingTop: insets.top }]}
+      style={U.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* ── Single top bar: back button + tabs in one row ── */}

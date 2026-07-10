@@ -173,7 +173,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={[P.flex, P.centered, { paddingTop: insets.top }]}>
+      <View style={[P.flex, P.centered]}>
         <ActivityIndicator color={BR} size="large" />
       </View>
     );
@@ -181,7 +181,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
 
   if (!profile) {
     return (
-      <View style={[P.flex, P.centered, { paddingTop: insets.top }]}>
+      <View style={[P.flex, P.centered]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={P.backFallback}>
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
@@ -193,7 +193,7 @@ export default function UserProfileScreen({ route, navigation }: Props) {
   return (
     <View style={P.flex}>
       {/* Fixed top bar — brick red continues into hero below */}
-      <View style={[P.topBar, { paddingTop: insets.top }]}>
+      <View style={P.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8} style={P.iconBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>

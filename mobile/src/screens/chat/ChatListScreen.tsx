@@ -5,7 +5,6 @@ import { ChatStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import Badge from '../../components/Badge';
-import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { colors, spacing } from '../../theme';
 import { useNavPadding } from '../../hooks/useNavPadding';
 import { useLocationStore } from '../../store/locationStore';
@@ -15,7 +14,8 @@ interface ChatGroupRow {
   location_id: string;
   name: string;
   is_moderator: boolean;
-  joined_at: string;
+  joined_at: string | null;
+  is_member: boolean;
 }
 
 type Props = NativeStackScreenProps<ChatStackParamList, 'ChatList'>;
@@ -25,6 +25,7 @@ export default function ChatListScreen({ navigation }: Props) {
   const { activeLocationId, visibilityLevel } = useLocationStore();
   const [groups, setGroups] = useState<ChatGroupRow[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await apiClient.get('/chat/groups/mine', {
@@ -37,9 +38,22 @@ export default function ChatListScreen({ navigation }: Props) {
     load();
   }, [load]);
 
+  async function openGroup(group: ChatGroupRow) {
+    if (!group.is_member) {
+      setJoiningId(group.id);
+      try {
+        await apiClient.post(`/chat/groups/${group.id}/join`);
+      } catch {
+        setJoiningId(null);
+        return;
+      }
+      setJoiningId(null);
+    }
+    navigation.navigate('ChatRoom', { groupId: group.id, groupName: group.name });
+  }
+
   return (
     <View style={styles.flex}>
-      <VisibilityFilterBar />
       <FlatList
         data={groups}
       keyExtractor={(item) => item.id}
@@ -49,13 +63,21 @@ export default function ChatListScreen({ navigation }: Props) {
       renderItem={({ item }) => (
         <TouchableOpacity
           style={styles.row}
-          onPress={() => navigation.navigate('ChatRoom', { groupId: item.id, groupName: item.name })}
+          onPress={() => openGroup(item)}
+          disabled={joiningId === item.id}
         >
           <Avatar name={item.name} size={44} />
           <View style={styles.rowInfo}>
             <Text style={styles.groupName}>{item.name}</Text>
           </View>
           {item.is_moderator && <Badge label="Moderator" />}
+          {!item.is_member && (
+            <View style={styles.joinPill}>
+              <Text style={styles.joinPillText}>
+                {joiningId === item.id ? 'Joining…' : 'Join'}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       )}
       />
@@ -69,4 +91,9 @@ const styles = StyleSheet.create({
   rowInfo: { flex: 1, marginLeft: spacing.md },
   groupName: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   empty: { padding: 24, textAlign: 'center', color: colors.textSecondary },
+  joinPill: {
+    backgroundColor: colors.primary, borderRadius: 100,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  joinPillText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 });

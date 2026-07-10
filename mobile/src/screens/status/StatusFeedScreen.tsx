@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
-import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { colors, spacing } from '../../theme';
 import { useNavPadding } from '../../hooks/useNavPadding';
 import { useLocationStore } from '../../store/locationStore';
@@ -189,7 +188,7 @@ export default function StatusFeedScreen({ navigation }: Props) {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <View style={[S.screen, { paddingTop: insets.top }]}>
+    <View style={S.screen}>
 
       {/* ── Top bar ── */}
       <View style={S.topBar}>
@@ -203,8 +202,6 @@ export default function StatusFeedScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       </View>
-
-      <VisibilityFilterBar />
 
       {/* ── Feed ── */}
       <FlatList

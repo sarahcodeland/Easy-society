@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MoreStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
@@ -103,7 +102,6 @@ function MemberCard({
 }
 
 export default function CommunityMembersScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
   const [filter, setFilter]       = useState<FilterKey>('all');
   const [search, setSearch]       = useState('');
   const [members, setMembers]     = useState<Member[]>([]);
@@ -143,7 +141,7 @@ export default function CommunityMembersScreen({ navigation }: Props) {
   }, [search]);
 
   return (
-    <View style={[S.flex, { paddingTop: insets.top }]}>
+    <View style={S.flex}>
       {/* Header */}
       <View style={S.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8} style={S.iconBtn}>

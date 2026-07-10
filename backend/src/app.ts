@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 import authRoutes from './modules/auth/routes';
@@ -24,6 +25,7 @@ export function createApp() {
 
   app.use(helmet());
   app.use(cors());
+  app.use(morgan('dev'));
   app.use(express.json({ limit: '5mb' }));
 
   app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));

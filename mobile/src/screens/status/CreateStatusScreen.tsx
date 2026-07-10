@@ -121,7 +121,7 @@ export default function CreateStatusScreen({ navigation }: Props) {
 
   return (
     <KeyboardAvoidingView
-      style={[S.flex, { paddingTop: insets.top }]}
+      style={S.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header */}

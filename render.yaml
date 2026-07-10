@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: easysociety-backend
+    runtime: node
+    plan: free
+    region: singapore
+    branch: backend-connected
+    buildCommand: npm install --prefix shared && npm run build --prefix shared && npm install --prefix backend && npm run build --prefix backend
+    startCommand: npm start --prefix backend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      - key: OTP_PROVIDER
+        value: mock
+      - key: STORAGE_PROVIDER
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        sync: false
+      - key: OPENWEATHER_API_KEY
+        sync: false

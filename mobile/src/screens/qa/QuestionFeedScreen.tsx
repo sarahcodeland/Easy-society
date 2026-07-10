@@ -19,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { QaStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
-import VisibilityFilterBar from '../../components/VisibilityFilterBar';
 import { colors } from '../../theme';
 import { useNavPadding } from '../../hooks/useNavPadding';
 import { useLocationStore } from '../../store/locationStore';
@@ -210,7 +209,7 @@ export default function QuestionFeedScreen({ navigation }: Props) {
     : questions;
 
   return (
-    <View style={[S.screen, { paddingTop: insets.top }]}>
+    <View style={S.screen}>
 
       {/* ── Header: title + toggle ── */}
       <View style={S.header}>
@@ -248,8 +247,6 @@ export default function QuestionFeedScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
       </View>
-
-      <VisibilityFilterBar />
 
       {/* ── Feed ── */}
       <FlatList
