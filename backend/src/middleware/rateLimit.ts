@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { redis } from '../config/redis';
-import { ApiError } from './errorHandler';
+import { ApiError, asyncHandler } from './errorHandler';
 
 // Redis-backed fixed-window rate limiter so the limit is shared correctly
 // across every horizontally-scaled Node instance (an in-memory limiter would
@@ -11,7 +11,7 @@ export function redisRateLimit(opts: {
   max: number;
   keyFn?: (req: Request) => string;
 }) {
-  return async (req: Request, _res: Response, next: NextFunction) => {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
     const identity = opts.keyFn ? opts.keyFn(req) : req.ip ?? 'unknown';
     const key = `ratelimit:${opts.keyPrefix}:${identity}`;
     const count = await redis.incr(key);
@@ -22,5 +22,5 @@ export function redisRateLimit(opts: {
       throw new ApiError(429, 'Too many requests, please slow down');
     }
     next();
-  };
+  });
 }

@@ -4,7 +4,7 @@ import { VisibilityLevel, MIN_ACCOUNT_AGE_DAYS_FOR_ANNOUNCEMENTS } from '@easyso
 import { pool } from '../../db/pool';
 import { asyncHandler, ApiError } from '../../middleware/errorHandler';
 import { requireAuth } from '../../middleware/auth';
-import { resolveVisibleScope } from '../../utils/locationScope';
+import { resolveVisibleScope, scopeLocationFor } from '../../utils/locationScope';
 import { attachVisitorTags } from '../../utils/visitorTag';
 import { spamGuard } from '../../middleware/spamGuard';
 
@@ -39,7 +39,9 @@ router.get(
        FROM announcements a
        LEFT JOIN users u ON u.id = a.posted_by_user_id
        WHERE a.is_deleted = false
-         AND ((a.location_id = ANY($1::uuid[])) OR ($2 AND a.visibility_level = 'national'))
+         -- $1[1] is always the viewer's own area: posts from it show at any level
+         AND (a.scope_location_id = ANY($1::uuid[]) OR a.location_id = ($1::uuid[])[1]
+              OR ($2 AND a.visibility_level = 'national'))
        ORDER BY a.is_pinned DESC, a.created_at DESC
        LIMIT 50`,
       [scope.locationIds, scope.includeNational],
@@ -80,11 +82,12 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO announcements (posted_by_user_id, location_id, visibility_level, title, body, is_pinned, is_official)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO announcements (posted_by_user_id, location_id, visibility_level, title, body, is_pinned, is_official, scope_location_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, posted_by_user_id, location_id, visibility_level, title, body, is_pinned, is_official, created_at`,
       [req.auth!.userId, me.rows[0].location_id, body.visibility_level, body.title, body.body ?? null,
-        isOfficial ? body.is_pinned : false, isOfficial],
+        isOfficial ? body.is_pinned : false, isOfficial,
+        await scopeLocationFor(me.rows[0].location_id, body.visibility_level)],
     );
     res.status(201).json({ announcement: rows[0] });
   }),

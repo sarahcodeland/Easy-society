@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '@easysociety/shared';
 import { env } from '../config/env';
-import { ApiError } from './errorHandler';
+import { ApiError, asyncHandler } from './errorHandler';
 import { redis } from '../config/redis';
 import { pool } from '../db/pool';
 
@@ -41,7 +41,10 @@ async function isBanned(userId: string): Promise<boolean> {
   return banned;
 }
 
-export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
+// Wrapped so thrown ApiErrors reach the error handler — Express 4 does not
+// catch rejected promises from async middleware, and an unhandled rejection
+// crashes the whole process on Node 15+.
+export const requireAuth = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     throw new ApiError(401, 'Missing bearer token');
@@ -55,7 +58,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     throw new ApiError(403, 'This account has been banned');
   }
   next();
-}
+});
 
 // Best-effort: attaches req.auth if a valid token is present, but does not
 // reject the request otherwise. Useful for endpoints that behave

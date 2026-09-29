@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { VisibilityLevel } from '@easysociety/shared';
+import { NotificationType, VisibilityLevel } from '@easysociety/shared';
 import { pool } from '../../db/pool';
 import { asyncHandler, ApiError } from '../../middleware/errorHandler';
 import { requireAuth, optionalAuth } from '../../middleware/auth';
-import { resolveVisibleScope } from '../../utils/locationScope';
+import { resolveVisibleScope, scopeLocationFor } from '../../utils/locationScope';
 import { attachVisitorTags } from '../../utils/visitorTag';
 import { invalidate } from '../../utils/cache';
 import { spamGuard } from '../../middleware/spamGuard';
+import { notifyInBackground } from '../notifications/service';
 
 const router = Router();
 
@@ -21,6 +22,13 @@ const createQuestionSchema = z.object({
   is_anonymous: z.boolean().optional(),
   location_tag: z.string().max(200).nullable().optional(),
 });
+
+// Anonymous questions keep user_id in the DB (for moderation and "my
+// questions") but never expose the author to anyone except the author.
+function maskAnonymous<T extends { user_id: string | null; is_anonymous?: boolean }>(row: T, viewerId?: string): T {
+  if (!row.is_anonymous || row.user_id === viewerId) return row;
+  return { ...row, user_id: null, author_name: null, author_photo: null };
+}
 
 // GET /qa/questions?visibility=area — defaults to the viewer's registered
 // area; pass a wider visibility (city/district/state/national) to expand,
@@ -42,6 +50,7 @@ router.get(
 
     const { rows } = await pool.query(
       `SELECT q.id, q.user_id, q.location_id, q.visibility_level, q.title, q.body, q.media_urls, q.created_at,
+              q.is_anonymous, q.priority, q.categories, q.location_tag,
               u.name AS author_name, u.profile_photo_url AS author_photo,
               COALESCE(v.score, 0) AS vote_score,
               COALESCE(r.count, 0) AS recommendation_count,
@@ -58,14 +67,16 @@ router.get(
        ) r ON r.target_id = q.id
        WHERE q.is_deleted = false
          AND q.user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE blocker_user_id = $3)
-         AND ((q.location_id = ANY($1::uuid[])) OR ($2 AND q.visibility_level = 'national'))
+         -- $1[1] is always the viewer's own area: posts from it show at any level
+         AND (q.scope_location_id = ANY($1::uuid[]) OR q.location_id = ($1::uuid[])[1]
+              OR ($2 AND q.visibility_level = 'national'))
        ORDER BY q.created_at DESC
        LIMIT 50`,
       [scope.locationIds, scope.includeNational, req.auth!.userId],
     );
 
     const withTags = await attachVisitorTags(rows, viewerLocationId);
-    res.json({ questions: withTags });
+    res.json({ questions: withTags.map((r) => maskAnonymous(r, req.auth!.userId)) });
   }),
 );
 
@@ -79,10 +90,14 @@ router.post(
     if (!me.rows[0]?.location_id) throw new ApiError(400, 'Complete your profile/location first');
 
     const { rows } = await pool.query(
-      `INSERT INTO questions (user_id, location_id, visibility_level, title, body, media_urls)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, user_id, location_id, visibility_level, title, body, media_urls, created_at`,
-      [req.auth!.userId, me.rows[0].location_id, body.visibility_level, body.title, body.body ?? null, body.media_urls ?? []],
+      `INSERT INTO questions (user_id, location_id, visibility_level, title, body, media_urls,
+                              scope_location_id, is_anonymous, priority, categories, location_tag)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, user_id, location_id, visibility_level, title, body, media_urls,
+                 is_anonymous, priority, categories, location_tag, created_at`,
+      [req.auth!.userId, me.rows[0].location_id, body.visibility_level, body.title, body.body ?? null, body.media_urls ?? [],
+        await scopeLocationFor(me.rows[0].location_id, body.visibility_level),
+        body.is_anonymous ?? false, body.priority ?? 'normal', body.categories ?? [], body.location_tag ?? null],
     );
     await invalidate('qa:feed', true);
     res.status(201).json({ question: rows[0] });
@@ -95,7 +110,11 @@ router.get(
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
     const q = await pool.query(
-      `SELECT q.*, u.name AS author_name, u.profile_photo_url AS author_photo
+      `SELECT q.*, u.name AS author_name, u.profile_photo_url AS author_photo,
+              (SELECT COALESCE(SUM(CASE WHEN vote_type = 'upvote' THEN 1 ELSE -1 END), 0)::int
+                 FROM qa_votes WHERE target_type = 'question' AND target_id = q.id) AS vote_score,
+              (SELECT COUNT(*)::int FROM qa_recommendations
+                WHERE target_type = 'question' AND target_id = q.id) AS recommendation_count
        FROM questions q LEFT JOIN users u ON u.id = q.user_id
        WHERE q.id = $1 AND q.is_deleted = false`,
       [id],
@@ -119,11 +138,13 @@ router.get(
          WHERE target_type = 'answer' GROUP BY target_id
        ) r ON r.target_id = a.id
        WHERE a.question_id = $1 AND a.is_deleted = false
+         AND ($2::uuid IS NULL OR a.user_id IS NULL OR a.user_id NOT IN
+               (SELECT blocked_user_id FROM user_blocks WHERE blocker_user_id = $2))
        ORDER BY recommendation_count DESC, vote_score DESC, a.created_at ASC`,
-      [id],
+      [id, req.auth?.userId ?? null],
     );
 
-    res.json({ question: q.rows[0], answers: answers.rows });
+    res.json({ question: maskAnonymous(q.rows[0], req.auth?.userId), answers: answers.rows });
   }),
 );
 
@@ -138,6 +159,12 @@ router.post(
        RETURNING id, question_id, user_id, body, created_at`,
       [questionId, req.auth!.userId, body],
     );
+    const owner = await pool.query('SELECT user_id, title FROM questions WHERE id = $1', [questionId]);
+    notifyInBackground({
+      userId: owner.rows[0]?.user_id, actorId: req.auth!.userId,
+      type: NotificationType.REPLY, referenceId: questionId, referenceType: 'question',
+      pushTitle: 'New answer', pushBody: `Someone answered your question "${owner.rows[0]?.title ?? ''}"`,
+    });
     res.status(201).json({ answer: rows[0] });
   }),
 );
@@ -175,6 +202,12 @@ router.post(
        RETURNING id, answer_id, user_id, parent_comment_id, body, created_at`,
       [answerId, req.auth!.userId, parentCommentId, body],
     );
+    const owner = await pool.query('SELECT user_id, question_id FROM answers WHERE id = $1', [answerId]);
+    notifyInBackground({
+      userId: owner.rows[0]?.user_id, actorId: req.auth!.userId,
+      type: NotificationType.REPLY, referenceId: owner.rows[0]?.question_id, referenceType: 'question',
+      pushTitle: 'New comment', pushBody: 'Someone commented on your answer',
+    });
     res.status(201).json({ comment: rows[0] });
   }),
 );
@@ -229,6 +262,17 @@ router.post(
        ON CONFLICT (user_id, target_id, target_type) DO UPDATE SET vote_type = EXCLUDED.vote_type`,
       [req.auth!.userId, target_id, target_type, vote_type],
     );
+    if (vote_type === 'upvote') {
+      const owner = await pool.query(
+        target_type === 'question' ? 'SELECT user_id FROM questions WHERE id = $1' : 'SELECT user_id FROM answers WHERE id = $1',
+        [target_id],
+      );
+      notifyInBackground({
+        userId: owner.rows[0]?.user_id, actorId: req.auth!.userId,
+        type: NotificationType.UPVOTE, referenceId: target_id, referenceType: target_type,
+        pushTitle: 'New upvote', pushBody: `Someone upvoted your ${target_type}`,
+      });
+    }
     res.status(201).json({ ok: true });
   }),
 );
@@ -252,11 +296,23 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const { target_id, target_type } = targetSchema.parse(req.body);
-    await pool.query(
+    const inserted = await pool.query(
       `INSERT INTO qa_recommendations (user_id, target_id, target_type)
-       VALUES ($1, $2, $3) ON CONFLICT (user_id, target_id, target_type) DO NOTHING`,
+       VALUES ($1, $2, $3) ON CONFLICT (user_id, target_id, target_type) DO NOTHING
+       RETURNING id`,
       [req.auth!.userId, target_id, target_type],
     );
+    if (inserted.rows[0]) {
+      const owner = await pool.query(
+        target_type === 'question' ? 'SELECT user_id FROM questions WHERE id = $1' : 'SELECT user_id FROM answers WHERE id = $1',
+        [target_id],
+      );
+      notifyInBackground({
+        userId: owner.rows[0]?.user_id, actorId: req.auth!.userId,
+        type: NotificationType.RECOMMENDATION, referenceId: target_id, referenceType: target_type,
+        pushTitle: 'Marked helpful', pushBody: `Someone found your ${target_type} helpful`,
+      });
+    }
     res.status(201).json({ ok: true });
   }),
 );

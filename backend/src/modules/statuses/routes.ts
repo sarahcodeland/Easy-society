@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { StatusMediaType, STATUS_EXPIRY_HOURS } from '@easysociety/shared';
+import { NotificationType, StatusMediaType, STATUS_EXPIRY_HOURS } from '@easysociety/shared';
 import { pool } from '../../db/pool';
 import { asyncHandler, ApiError } from '../../middleware/errorHandler';
 import { requireAuth } from '../../middleware/auth';
+import { notifyInBackground } from '../notifications/service';
 
 const router = Router();
 
@@ -162,6 +163,12 @@ router.post(
        RETURNING id, status_id, user_id, parent_comment_id, body, created_at`,
       [statusId, req.auth!.userId, parentCommentId, body],
     );
+    const owner = await pool.query('SELECT user_id FROM statuses WHERE id = $1', [statusId]);
+    notifyInBackground({
+      userId: owner.rows[0]?.user_id, actorId: req.auth!.userId,
+      type: NotificationType.REPLY, referenceId: statusId, referenceType: 'status',
+      pushTitle: 'New comment', pushBody: 'Someone commented on your status',
+    });
     res.status(201).json({ comment: rows[0] });
   }),
 );

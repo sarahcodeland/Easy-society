@@ -88,7 +88,7 @@ router.get(
     const targetType = req.query.target_type ? z.nativeEnum(ModerationTargetType).parse(req.query.target_type) : null;
     const { rows } = await pool.query(
       `SELECT id, moderator_user_id, target_type, target_id, action, reason, created_at
-       FROM moderation_actions WHERE ($1::text IS NULL OR target_type = $1) ORDER BY created_at DESC LIMIT 200`,
+       FROM moderation_actions WHERE ($1::text IS NULL OR target_type::text = $1) ORDER BY created_at DESC LIMIT 200`,
       [targetType],
     );
     res.json({ moderation_actions: rows });
