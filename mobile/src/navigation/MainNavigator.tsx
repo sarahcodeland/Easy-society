@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BottomTabBarProps, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainTabParamList, ChatStackParamList, QaStackParamList, StatusStackParamList, MarketplaceStackParamList, MoreStackParamList } from './types';
@@ -57,6 +58,10 @@ const TAB_CONFIG: Record<string, { icon: TabIconName; label: string }> = {
 
 const VISIBLE_TABS = ['ChatTab', 'QaTab', 'StatusTab', 'MarketplaceTab', 'AnnouncementsTab'];
 
+// Screens with their own bottom-pinned composer — the floating bar would sit
+// on top of the text input, so it's hidden while these are focused.
+const HIDE_TAB_BAR_ON = ['ChatRoom', 'QuestionDetail'];
+
 const ACTIVE_FLEX   = 2.5;
 const INACTIVE_FLEX = 1;
 
@@ -94,13 +99,15 @@ function TabButton({
       accessibilityLabel={accessibilityLabel ?? cfg.label}
     >
       {/* Bare icon — rendered at all times, fades to 0 when active */}
-      <Animated.View style={[StyleSheet.absoluteFill, T.centered, { opacity: iconOpacity }]}>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, T.centered, { opacity: iconOpacity }]}>
         <Ionicons name={cfg.icon} size={26} color="rgba(255,255,255,0.45)" />
       </Animated.View>
 
       {/* Pill — in normal flow (not absolute), fades in when active.
-          The parent Animated.View expands its flex so the pill always has room. */}
-      <Animated.View style={[T.pill, { opacity }]}>
+          The parent Animated.View expands its flex so the pill always has room.
+          pointerEvents none: the invisible pill of an inactive tab is wider
+          than its slot and would otherwise steal taps from the neighbour tab. */}
+      <Animated.View pointerEvents="none" style={[T.pill, { opacity }]}>
         <Ionicons name={cfg.icon} size={20} color="#fff" />
         <Text style={T.pillLabel} numberOfLines={1}>{cfg.label}</Text>
       </Animated.View>
@@ -137,6 +144,9 @@ function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   // flexAnims is stable (created once in useRef); visibleRoutes is stable too.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.index]);
+
+  const focusedChild = getFocusedRouteNameFromRoute(state.routes[state.index]);
+  if (focusedChild && HIDE_TAB_BAR_ON.includes(focusedChild)) return null;
 
   return (
     <View style={T.wrapper} pointerEvents="box-none">

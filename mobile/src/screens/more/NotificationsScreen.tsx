@@ -8,6 +8,7 @@ interface NotificationRow {
   type: string;
   reference_id: string | null;
   reference_type: string | null;
+  body: string | null;
   is_read: boolean;
   created_at: string;
 }
@@ -40,7 +41,7 @@ export default function NotificationsScreen() {
       ListEmptyComponent={<Text style={styles.empty}>No notifications yet</Text>}
       renderItem={({ item }) => (
         <TouchableOpacity style={[styles.row, !item.is_read && styles.unread]} onPress={() => markRead(item.id)}>
-          <Text style={styles.type}>{item.type.replace('_', ' ')}</Text>
+          <Text style={styles.type}>{item.body ?? item.type.replace('_', ' ')}</Text>
           <Text style={styles.time}>{new Date(item.created_at).toLocaleString()}</Text>
         </TouchableOpacity>
       )}
@@ -51,7 +52,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   row: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
   unread: { backgroundColor: '#F0F8F0' },
-  type: { fontSize: 15, textTransform: 'capitalize' },
+  type: { fontSize: 14, color: '#1A1A1A' },
   time: { fontSize: 12, color: '#999', marginTop: 4 },
   empty: { padding: 24, textAlign: 'center', color: '#777' },
 });

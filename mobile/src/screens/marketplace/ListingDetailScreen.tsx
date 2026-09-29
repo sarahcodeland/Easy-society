@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
-  Dimensions,
   FlatList,
   Image,
   Linking,
@@ -20,8 +19,8 @@ import { ListingCategory } from '@easysociety/shared';
 import { MarketplaceStackParamList } from '../../navigation/types';
 import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
+import { useResponsive } from '../../hooks/useResponsive';
 
-const { width: SW } = Dimensions.get('window');
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 
@@ -46,7 +45,6 @@ const C = {
 const IMG_H    = 220;
 const CELL_GAP = 8;
 const SEC_PX   = 14;
-const CELL_W   = (SW - SEC_PX * 2 - CELL_GAP) / 2;
 
 type Props = NativeStackScreenProps<MarketplaceStackParamList, 'ListingDetail'>;
 
@@ -75,7 +73,7 @@ function timeAgo(d: string) {
 
 function fmtPrice(price: number | null, category: string) {
   if (!price) return null;
-  const r = `₹${price.toLocaleString('en-IN')}`;
+  const r = `₹${Number(price).toLocaleString('en-IN')}`;
   if (category === ListingCategory.RENT)     return `${r}/mo`;
   if (category === ListingCategory.SERVICES) return `${r}/hr`;
   return r;
@@ -197,6 +195,7 @@ function Stars({ n = 5, size = 11 }: { n?: number; size?: number }) {
 
 function Gallery({ photos, isPremium }: { photos: Photo[]; isPremium: boolean }) {
   const [idx, setIdx] = useState(0);
+  const { contentWidth: SW } = useResponsive();
 
   if (!photos.length) return null;
 
@@ -376,6 +375,8 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
   const { listingId } = route.params;
   const insets = useSafeAreaInsets();
   const navPadding = useNavPadding();
+  const { contentWidth } = useResponsive();
+  const cellW = (contentWidth - SEC_PX * 2 - CELL_GAP) / 2;
 
   const [data, setData]         = useState<any>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -493,7 +494,7 @@ export default function ListingDetailScreen({ route, navigation }: Props) {
             <View style={D.sec}>
               <View style={D.grid}>
                 {specs.map((s, i) => (
-                  <View key={i} style={D.cell}>
+                  <View key={i} style={[D.cell, { width: cellW }]}>
                     <Text style={D.cellLabel}>{s.label}</Text>
                     <Text style={D.cellVal} numberOfLines={2}>{s.value}</Text>
                   </View>
@@ -699,7 +700,7 @@ const D = StyleSheet.create({
 
   // ── Details grid
   grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: CELL_GAP },
-  cell:      { width: CELL_W, backgroundColor: C.gridBg, borderRadius: 8, padding: 10 },
+  cell:      { backgroundColor: C.gridBg, borderRadius: 8, padding: 10 },
   cellLabel: { fontSize: 9, fontWeight: '700', color: C.gray, letterSpacing: 0.5, marginBottom: 3 },
   cellVal:   { fontSize: 13, fontWeight: '700', color: C.text },
 

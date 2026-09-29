@@ -4,6 +4,8 @@ import { pool } from '../../db/pool';
 import { asyncHandler, ApiError } from '../../middleware/errorHandler';
 import { requireAuth, optionalAuth } from '../../middleware/auth';
 import { getGoogleMyBusinessProvider } from '../../services/googleMyBusiness';
+import { NotificationType } from '@easysociety/shared';
+import { notifyInBackground } from '../notifications/service';
 
 const router = Router();
 
@@ -104,6 +106,12 @@ router.post(
        RETURNING id, business_id, user_id, rating, body, created_at`,
       [id, req.auth!.userId, rating, body],
     );
+    const owner = await pool.query('SELECT user_id, name FROM businesses WHERE id = $1', [id]);
+    notifyInBackground({
+      userId: owner.rows[0]?.user_id, actorId: req.auth!.userId,
+      type: NotificationType.REPLY, referenceId: id, referenceType: 'business',
+      pushTitle: 'New review', pushBody: `${rating}★ review on "${owner.rows[0]?.name ?? 'your business'}"`,
+    });
     res.status(201).json({ review: rows[0] });
   }),
 );

@@ -26,14 +26,18 @@ router.get(
       }
     }
 
-    const { rows } = await pool.query(
+    const fetchSchemes = (lang: string) => pool.query(
       `SELECT id, title, description, source_url, language, location_id, last_synced_at, created_at
        FROM schemes
        WHERE language = $1 AND (location_id IS NULL OR location_id = ANY($2::uuid[]))
        ORDER BY location_id IS NULL, last_synced_at DESC NULLS LAST
        LIMIT 100`,
-      [language, locationIds],
+      [lang, locationIds],
     );
+    let { rows } = await fetchSchemes(language);
+    // Not every scheme is translated into every app language yet — fall
+    // back to English rather than showing an empty list.
+    if (rows.length === 0 && language !== 'en') ({ rows } = await fetchSchemes('en'));
     res.json({ schemes: rows });
   }),
 );

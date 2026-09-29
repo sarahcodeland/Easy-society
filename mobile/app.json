@@ -5,12 +5,22 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.easysociety.app"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fba898bd-d818-4e26-a551-5caae6772a28"
+      }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

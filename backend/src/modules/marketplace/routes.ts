@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { ListingCategory, ReactionType, VisibilityLevel } from '@easysociety/shared';
+import { ListingCategory, NotificationType, ReactionType, VisibilityLevel } from '@easysociety/shared';
 import { pool } from '../../db/pool';
 import { asyncHandler, ApiError } from '../../middleware/errorHandler';
 import { requireAuth, optionalAuth } from '../../middleware/auth';
-import { resolveVisibleScope } from '../../utils/locationScope';
+import { resolveVisibleScope, scopeLocationFor } from '../../utils/locationScope';
 import { attachVisitorTags } from '../../utils/visitorTag';
 import { spamGuard } from '../../middleware/spamGuard';
+import { notifyInBackground } from '../notifications/service';
 
 const router = Router();
 
@@ -55,7 +56,9 @@ router.get(
        WHERE l.is_deleted = false AND l.is_active = true
          AND l.user_id NOT IN (SELECT blocked_user_id FROM user_blocks WHERE blocker_user_id = $3)
          AND (l.category = $4 OR $4 IS NULL)
-         AND ((l.location_id = ANY($1::uuid[])) OR ($2 AND l.visibility_level = 'national'))
+         -- $1[1] is always the viewer's own area: posts from it show at any level
+         AND (l.scope_location_id = ANY($1::uuid[]) OR l.location_id = ($1::uuid[])[1]
+              OR ($2 AND l.visibility_level = 'national'))
        ORDER BY l.created_at DESC
        LIMIT 50`,
       [scope.locationIds, scope.includeNational, req.auth!.userId, category ?? null, req.auth!.userId],
@@ -76,11 +79,12 @@ router.post(
     if (!me.rows[0]?.location_id) throw new ApiError(400, 'Complete your profile/location first');
 
     const inserted = await pool.query(
-      `INSERT INTO listings (user_id, location_id, visibility_level, category, sub_category, title, description, price, contact_info)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO listings (user_id, location_id, visibility_level, category, sub_category, title, description, price, contact_info, scope_location_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id, user_id, location_id, visibility_level, category, sub_category, title, description, price, contact_info, is_active, created_at`,
       [req.auth!.userId, me.rows[0].location_id, body.visibility_level, body.category, body.sub_category ?? null,
-        body.title, body.description ?? null, body.price ?? null, body.contact_info ?? null],
+        body.title, body.description ?? null, body.price ?? null, body.contact_info ?? null,
+        await scopeLocationFor(me.rows[0].location_id, body.visibility_level)],
     );
     const listing = inserted.rows[0];
 
@@ -251,11 +255,20 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
-    await pool.query(
+    const inserted = await pool.query(
       `INSERT INTO listing_recommendations (user_id, listing_id) VALUES ($1, $2)
-       ON CONFLICT (user_id, listing_id) DO NOTHING`,
+       ON CONFLICT (user_id, listing_id) DO NOTHING
+       RETURNING id`,
       [req.auth!.userId, id],
     );
+    if (inserted.rows[0]) {
+      const owner = await pool.query('SELECT user_id, title FROM listings WHERE id = $1', [id]);
+      notifyInBackground({
+        userId: owner.rows[0]?.user_id, actorId: req.auth!.userId,
+        type: NotificationType.RECOMMENDATION, referenceId: id, referenceType: 'listing',
+        pushTitle: 'New recommendation', pushBody: `Someone recommended your listing "${owner.rows[0]?.title ?? ''}"`,
+      });
+    }
     res.status(201).json({ ok: true });
   }),
 );
@@ -327,6 +340,12 @@ router.post(
        RETURNING id, listing_id, user_id, parent_comment_id, body, created_at`,
       [id, req.auth!.userId, parentCommentId, body],
     );
+    const owner = await pool.query('SELECT user_id, title FROM listings WHERE id = $1', [id]);
+    notifyInBackground({
+      userId: owner.rows[0]?.user_id, actorId: req.auth!.userId,
+      type: NotificationType.REPLY, referenceId: id, referenceType: 'listing',
+      pushTitle: 'New comment', pushBody: `Someone commented on your listing "${owner.rows[0]?.title ?? ''}"`,
+    });
     res.status(201).json({ comment: rows[0] });
   }),
 );

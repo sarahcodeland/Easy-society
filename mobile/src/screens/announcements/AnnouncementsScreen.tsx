@@ -6,6 +6,7 @@ import { speak } from '../../voice/tts';
 import { useAuthStore } from '../../store/authStore';
 import { useLocationStore } from '../../store/locationStore';
 import { useNavPadding } from '../../hooks/useNavPadding';
+import ResponsiveFrame from '../../components/ResponsiveFrame';
 
 interface AnnouncementRow {
   id: string;
@@ -80,27 +81,29 @@ export default function AnnouncementsScreen() {
           </View>
         )}
       />
-      <TouchableOpacity style={styles.fab} onPress={() => setComposerVisible(true)}>
+      <TouchableOpacity style={[styles.fab, { bottom: navPadding - 4 }]} onPress={() => setComposerVisible(true)}>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
       <Modal visible={composerVisible} animationType="slide">
-        <View style={styles.composer}>
-          <Text style={styles.composerLabel}>Title</Text>
-          <TextInput style={styles.input} value={title} onChangeText={setTitle} />
-          <Text style={styles.composerLabel}>Body</Text>
-          <TextInput style={[styles.input, styles.multiline]} value={body} onChangeText={setBody} multiline />
-          <Text style={styles.note}>
-            Moderators/admins post official, pinnable announcements. Regular users post to Community
-            Updates (labeled as user-posted) and must have an account older than 7 days.
-          </Text>
-          <TouchableOpacity style={styles.submitButton} onPress={submit}>
-            <Text style={styles.submitButtonText}>Post</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setComposerVisible(false)}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+        <ResponsiveFrame backdrop="#FFFFFF">
+          <View style={styles.composer}>
+            <Text style={styles.composerLabel}>Title</Text>
+            <TextInput style={styles.input} value={title} onChangeText={setTitle} />
+            <Text style={styles.composerLabel}>Body</Text>
+            <TextInput style={[styles.input, styles.multiline]} value={body} onChangeText={setBody} multiline />
+            <Text style={styles.note}>
+              Moderators/admins post official, pinnable announcements. Regular users post to Community
+              Updates (labeled as user-posted) and must have an account older than 7 days.
+            </Text>
+            <TouchableOpacity style={styles.submitButton} onPress={submit}>
+              <Text style={styles.submitButtonText}>Post</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setComposerVisible(false)}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </ResponsiveFrame>
       </Modal>
     </View>
   );

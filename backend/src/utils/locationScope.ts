@@ -113,3 +113,21 @@ export async function getAreaIdsInScope(
 
   return rows.map((r) => r.id);
 }
+
+// scope_location_id for new content: the poster's ancestor at the chosen
+// visibility level (NULL for national). Feeds match it against the viewer's
+// ancestry from resolveVisibleScope, so a city-level post reaches every
+// area in that city while location_id keeps the poster's own area.
+export async function scopeLocationFor(
+  posterAreaLocationId: string,
+  level: VisibilityLevel,
+): Promise<string | null> {
+  if (level === VisibilityLevel.NATIONAL) return null;
+  if (level === VisibilityLevel.AREA) return posterAreaLocationId;
+  const ancestry = await getAncestry(posterAreaLocationId);
+  const id =
+    level === VisibilityLevel.CITY ? ancestry.city_id :
+    level === VisibilityLevel.DISTRICT ? ancestry.district_id :
+    ancestry.state_id;
+  return id ?? posterAreaLocationId;
+}

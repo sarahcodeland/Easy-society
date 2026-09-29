@@ -11,7 +11,7 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `SELECT id, type, reference_id, reference_type, is_read, created_at
+      `SELECT id, type, reference_id, reference_type, body, is_read, created_at
        FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100`,
       [req.auth!.userId],
     );

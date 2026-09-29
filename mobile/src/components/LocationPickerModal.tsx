@@ -15,6 +15,7 @@ import { Location } from '@easysociety/shared';
 import { apiClient } from '../api/client';
 import { useLocationStore } from '../store/locationStore';
 import { colors, radii } from '../theme';
+import ResponsiveFrame from './ResponsiveFrame';
 
 interface Props {
   visible: boolean;
@@ -106,87 +107,89 @@ export default function LocationPickerModal({ visible, onClose }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[S.container, { paddingTop: insets.top }]}>
+      <ResponsiveFrame backdrop="#EDE7E3">
+        <View style={[S.container, { paddingTop: insets.top }]}>
 
-        {/* Header */}
-        <View style={S.header}>
-          {stack.length > 0 ? (
-            <TouchableOpacity onPress={handleBack} hitSlop={8} style={S.backBtn}>
-              <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+          {/* Header */}
+          <View style={S.header}>
+            {stack.length > 0 ? (
+              <TouchableOpacity onPress={handleBack} hitSlop={8} style={S.backBtn}>
+                <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ) : (
+              <View style={S.backBtn} />
+            )}
+            <View style={S.headerCenter}>
+              <Text style={S.headerTitle}>Browse Location</Text>
+              {breadcrumb ? (
+                <Text style={S.breadcrumb} numberOfLines={1}>{breadcrumb}</Text>
+              ) : null}
+            </View>
+            <TouchableOpacity onPress={onClose} hitSlop={8} style={S.closeBtn}>
+              <Ionicons name="close" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
-          ) : (
-            <View style={S.backBtn} />
-          )}
-          <View style={S.headerCenter}>
-            <Text style={S.headerTitle}>Browse Location</Text>
-            {breadcrumb ? (
-              <Text style={S.breadcrumb} numberOfLines={1}>{breadcrumb}</Text>
-            ) : null}
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={8} style={S.closeBtn}>
-            <Ionicons name="close" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
 
-        {/* Search */}
-        <View style={S.searchWrap}>
-          <Ionicons name="search-outline" size={16} color={colors.textMuted} />
-          <TextInput
-            style={S.searchInput}
-            placeholder="Search areas…"
-            placeholderTextColor={colors.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-            autoCorrect={false}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearch(''); setSearchResults([]); }} hitSlop={8}>
-              <Ionicons name="close-circle" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Level hint */}
-        {search.trim().length < 2 && (
-          <Text style={S.levelHint}>{levelHint}</Text>
-        )}
-
-        {/* List */}
-        {loading ? (
-          <ActivityIndicator style={S.loader} color={colors.primary} />
-        ) : (
-          <FlatList
-            data={displayList}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={S.list}
-            ListEmptyComponent={
-              <Text style={S.empty}>
-                {search.trim().length >= 2 ? 'No areas found.' : 'Nothing here yet.'}
-              </Text>
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity style={S.row} onPress={() => handleSelect(item)} activeOpacity={0.75}>
-                <Ionicons
-                  name={item.type === 'area' ? 'location' : 'chevron-forward-outline'}
-                  size={18}
-                  color={item.type === 'area' ? colors.primary : colors.textSecondary}
-                  style={S.rowIcon}
-                />
-                <Text style={S.rowName}>{item.name}</Text>
-                {item.type !== 'area' && (
-                  <Ionicons name="chevron-forward" size={16} color={colors.border} />
-                )}
-                {item.type === 'area' && (
-                  <View style={S.selectPill}>
-                    <Text style={S.selectPillText}>Select</Text>
-                  </View>
-                )}
+          {/* Search */}
+          <View style={S.searchWrap}>
+            <Ionicons name="search-outline" size={16} color={colors.textMuted} />
+            <TextInput
+              style={S.searchInput}
+              placeholder="Search areas…"
+              placeholderTextColor={colors.textMuted}
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => { setSearch(''); setSearchResults([]); }} hitSlop={8}>
+                <Ionicons name="close-circle" size={16} color={colors.textMuted} />
               </TouchableOpacity>
             )}
-          />
-        )}
-      </View>
+          </View>
+
+          {/* Level hint */}
+          {search.trim().length < 2 && (
+            <Text style={S.levelHint}>{levelHint}</Text>
+          )}
+
+          {/* List */}
+          {loading ? (
+            <ActivityIndicator style={S.loader} color={colors.primary} />
+          ) : (
+            <FlatList
+              data={displayList}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={S.list}
+              ListEmptyComponent={
+                <Text style={S.empty}>
+                  {search.trim().length >= 2 ? 'No areas found.' : 'Nothing here yet.'}
+                </Text>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity style={S.row} onPress={() => handleSelect(item)} activeOpacity={0.75}>
+                  <Ionicons
+                    name={item.type === 'area' ? 'location' : 'chevron-forward-outline'}
+                    size={18}
+                    color={item.type === 'area' ? colors.primary : colors.textSecondary}
+                    style={S.rowIcon}
+                  />
+                  <Text style={S.rowName}>{item.name}</Text>
+                  {item.type !== 'area' && (
+                    <Ionicons name="chevron-forward" size={16} color={colors.border} />
+                  )}
+                  {item.type === 'area' && (
+                    <View style={S.selectPill}>
+                      <Text style={S.selectPillText}>Select</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+      </ResponsiveFrame>
     </Modal>
   );
 }

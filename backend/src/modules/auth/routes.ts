@@ -67,7 +67,7 @@ router.post(
       `INSERT INTO users (email, password_hash, name, location_id, preferred_language)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING ${USER_FIELDS}`,
-      [email, passwordHash, name, location_id, preferred_language ?? null],
+      [email, passwordHash, name, location_id, preferred_language ?? 'en'],
     );
 
     const user = rows[0];
