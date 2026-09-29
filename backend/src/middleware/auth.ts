@@ -32,12 +32,13 @@ export function verifyAuthToken(token: string): AuthTokenPayload {
 // across a fleet of instances just to check a boolean.
 async function isBanned(userId: string): Promise<boolean> {
   const cacheKey = `user:banned:${userId}`;
-  const cached = await redis.get(cacheKey);
+  const cached = await redis.get(cacheKey).catch(() => null);
   if (cached !== null) return cached === '1';
 
   const { rows } = await pool.query('SELECT is_banned FROM users WHERE id = $1', [userId]);
   const banned = rows[0]?.is_banned === true;
-  await redis.set(cacheKey, banned ? '1' : '0', 'EX', 60);
+  // Cache write is best-effort; with Redis down every request just hits the DB.
+  await redis.set(cacheKey, banned ? '1' : '0', 'EX', 60).catch(() => undefined);
   return banned;
 }
 

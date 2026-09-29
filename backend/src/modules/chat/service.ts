@@ -35,7 +35,7 @@ export async function assertMember(groupId: string, userId: string): Promise<voi
 }
 
 export async function isMuted(groupId: string, userId: string): Promise<boolean> {
-  const muted = await redis.get(`chat:muted:${groupId}:${userId}`);
+  const muted = await redis.get(`chat:muted:${groupId}:${userId}`).catch(() => null);
   return muted === '1';
 }
 
@@ -62,15 +62,20 @@ export async function persistMessage(input: {
   message.sender_photo = sender.rows[0]?.profile_photo_url ?? null;
   message.sender_location_id = sender.rows[0]?.location_id ?? null;
 
-  await redis.lpush(recentKey(input.groupId), JSON.stringify(message));
-  await redis.ltrim(recentKey(input.groupId), 0, RECENT_CACHE_SIZE - 1);
-  await redis.expire(recentKey(input.groupId), RECENT_CACHE_TTL_SECONDS);
+  // Recent-messages cache is best-effort: the message is already in Postgres.
+  try {
+    await redis.lpush(recentKey(input.groupId), JSON.stringify(message));
+    await redis.ltrim(recentKey(input.groupId), 0, RECENT_CACHE_SIZE - 1);
+    await redis.expire(recentKey(input.groupId), RECENT_CACHE_TTL_SECONDS);
+  } catch {
+    // Redis unavailable — history falls back to the DB query
+  }
 
   return message;
 }
 
 export async function getRecentMessages(groupId: string, limit = 50): Promise<ChatMessageRow[]> {
-  const cachedRaw = await redis.lrange(recentKey(groupId), 0, limit - 1);
+  const cachedRaw = await redis.lrange(recentKey(groupId), 0, limit - 1).catch(() => [] as string[]);
   if (cachedRaw.length >= Math.min(limit, RECENT_CACHE_SIZE)) {
     return cachedRaw.map((r) => JSON.parse(r) as ChatMessageRow).reverse();
   }

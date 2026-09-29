@@ -9,8 +9,14 @@ export function spamGuard(opts: { keyPrefix: string; windowSeconds: number; max:
   return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.auth) return next();
     const key = `spamguard:${opts.keyPrefix}:${req.auth.userId}`;
-    const count = await redis.incr(key);
-    if (count === 1) await redis.expire(key, opts.windowSeconds);
+    let count = 0;
+    try {
+      count = await redis.incr(key);
+      if (count === 1) await redis.expire(key, opts.windowSeconds);
+    } catch {
+      // Redis unavailable — fail open rather than block all posting.
+      return next();
+    }
     if (count > opts.max) {
       throw new ApiError(429, 'You are posting too frequently — please slow down');
     }

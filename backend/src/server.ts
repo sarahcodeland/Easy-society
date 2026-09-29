@@ -25,6 +25,14 @@ httpServer.listen(env.port, () => {
   console.log(`EasySociety API listening on :${env.port} (${env.nodeEnv})`);
 });
 
+// Safety net: a stray rejected promise (e.g. the Socket.io Redis adapter
+// giving up on a command while Redis is unreachable) must not take the whole
+// API down — Node 15+ exits on unhandled rejections by default.
+process.on('unhandledRejection', (reason) => {
+  // eslint-disable-next-line no-console
+  console.error('Unhandled promise rejection', reason);
+});
+
 process.on('SIGTERM', () => {
   httpServer.close(() => process.exit(0));
 });

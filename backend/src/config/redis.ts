@@ -11,8 +11,11 @@ export const redis = new Redis(env.redisUrl, {
 
 // Pub/sub clients for Socket.IO adapter: must keep offline queue enabled so
 // psubscribe can be retried automatically when Redis reconnects
+// Subscriber: maxRetriesPerRequest null (ioredis' recommendation for
+// subscribers) so its (p)subscribe commands wait for reconnect instead of
+// rejecting after 20 retries.
 export const redisPub = new Redis(env.redisUrl, { connectTimeout: 5000 });
-export const redisSub = new Redis(env.redisUrl, { connectTimeout: 5000 });
+export const redisSub = new Redis(env.redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: null });
 
 for (const client of [redis, redisPub, redisSub]) {
   client.on('error', (err) => {
