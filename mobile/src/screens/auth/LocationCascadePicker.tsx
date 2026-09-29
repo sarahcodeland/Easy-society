@@ -12,6 +12,7 @@ import {
 import { Location, LocationType } from '@easysociety/shared';
 import { apiClient } from '../../api/client';
 import { colors } from '../../theme';
+import ResponsiveFrame from '../../components/ResponsiveFrame';
 
 interface Props {
   label: string;
@@ -65,63 +66,65 @@ export default function LocationCascadePicker({ label, parentId, disabled, value
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <SafeAreaView style={styles.modal}>
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{label}</Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={12} style={styles.closeBtn}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Content */}
-          {loading ? (
-            <ActivityIndicator style={styles.loader} size="large" color={colors.primary} />
-          ) : error ? (
-            <View style={styles.center}>
-              <Text style={styles.errorText}>Could not load locations.</Text>
-              <TouchableOpacity
-                style={styles.retryBtn}
-                onPress={() => {
-                  setError(false);
-                  setLoading(true);
-                  apiClient
-                    .get('/locations/children', { params: parentId ? { parent_id: parentId } : {} })
-                    .then(({ data }) => setOptions(
-                      expectedType ? (data.locations ?? []).filter((l: Location) => l.type === expectedType) : data.locations ?? [],
-                    ))
-                    .catch(() => setError(true))
-                    .finally(() => setLoading(false));
-                }}
-              >
-                <Text style={styles.retryText}>Retry</Text>
+        <ResponsiveFrame backdrop="#EDE7E3">
+          <SafeAreaView style={styles.modal}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{label}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={12} style={styles.closeBtn}>
+                <Text style={styles.closeBtnText}>✕</Text>
               </TouchableOpacity>
             </View>
-          ) : options.length === 0 ? (
-            <View style={styles.center}>
-              <Text style={styles.emptyText}>No options available.</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item.id}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              renderItem={({ item }) => (
+
+            {/* Content */}
+            {loading ? (
+              <ActivityIndicator style={styles.loader} size="large" color={colors.primary} />
+            ) : error ? (
+              <View style={styles.center}>
+                <Text style={styles.errorText}>Could not load locations.</Text>
                 <TouchableOpacity
-                  style={styles.option}
-                  activeOpacity={0.7}
+                  style={styles.retryBtn}
                   onPress={() => {
-                    onChange(item);
-                    setModalVisible(false);
+                    setError(false);
+                    setLoading(true);
+                    apiClient
+                      .get('/locations/children', { params: parentId ? { parent_id: parentId } : {} })
+                      .then(({ data }) => setOptions(
+                        expectedType ? (data.locations ?? []).filter((l: Location) => l.type === expectedType) : data.locations ?? [],
+                      ))
+                      .catch(() => setError(true))
+                      .finally(() => setLoading(false));
                   }}
                 >
-                  <Text style={styles.optionText}>{item.name}</Text>
-                  <Text style={styles.optionChevron}>›</Text>
+                  <Text style={styles.retryText}>Retry</Text>
                 </TouchableOpacity>
-              )}
-            />
-          )}
-        </SafeAreaView>
+              </View>
+            ) : options.length === 0 ? (
+              <View style={styles.center}>
+                <Text style={styles.emptyText}>No options available.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={options}
+                keyExtractor={(item) => item.id}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.option}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      onChange(item);
+                      setModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.optionText}>{item.name}</Text>
+                    <Text style={styles.optionChevron}>›</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </SafeAreaView>
+        </ResponsiveFrame>
       </Modal>
     </View>
   );

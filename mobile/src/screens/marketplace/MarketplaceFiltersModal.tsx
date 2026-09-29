@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ListingCategory } from '@easysociety/shared';
+import ResponsiveFrame from '../../components/ResponsiveFrame';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -282,160 +283,162 @@ export default function MarketplaceFiltersModal({ visible, activeTab, filters: p
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <SafeAreaView style={F.safe}>
+      <ResponsiveFrame backdrop="#EDE7E3">
+        <SafeAreaView style={F.safe}>
 
-        {/* ── Header ── */}
-        <View style={F.header}>
-          <TouchableOpacity onPress={onClose} hitSlop={12} style={{ width: 28 }}>
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </TouchableOpacity>
-          <Text style={F.headerTitle}>Filters{n > 0 ? ` (${n})` : ''}</Text>
-          <TouchableOpacity onPress={() => setF({ ...DEFAULT_FILTERS })} hitSlop={12}>
-            <Text style={F.clearTxt}>Clear All</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Category tabs ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={F.tabsRow} style={F.tabsWrap}>
-          {CATEGORY_TABS.map(t => {
-            const on = tab === t.key;
-            return (
-              <TouchableOpacity key={t.key} style={[F.tab, on && F.tabOn]} onPress={() => handleTabChange(t.key as MarketplaceTab)} activeOpacity={0.75}>
-                <Text style={[F.tabTxt, on && F.tabTxtOn]}>{t.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={F.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-
-            {/* ── BUY/SELL ─────────────────────────────────────────────── */}
-            {tab === ListingCategory.BUY_SELL && <>
-              <Sec title="Subcategory">
-                <Chips options={SUBCATEGORIES} value={f.subCategory} onSelect={v => up({ subCategory: v })} />
-              </Sec>
-              <Sec title="Condition">
-                <Chips options={CONDITIONS} value={f.condition} onSelect={v => up({ condition: v })} />
-              </Sec>
-              <Sec title="Price Range">
-                <DualInput minVal={f.priceMin} maxVal={f.priceMax} phMin="₹ Min" phMax="₹ 5,00,000" onMin={v => up({ priceMin: v })} onMax={v => up({ priceMax: v })} />
-              </Sec>
-              <Sec title="Other">
-                <TogRow label="Negotiable Only" value={f.negotiableOnly} onToggle={() => up({ negotiableOnly: !f.negotiableOnly })} />
-              </Sec>
-              <Sec title="Posted">
-                <Chips options={POSTED_OPTS} value={f.posted} onSelect={v => up({ posted: v })} />
-              </Sec>
-            </>}
-
-            {/* ── RENT ─────────────────────────────────────────────────── */}
-            {tab === ListingCategory.RENT && <>
-              <Sec title="Property Type">
-                <Chips options={PROPERTY_TYPES} value={f.propertyType} onSelect={v => up({ propertyType: v, bedrooms: null })} />
-              </Sec>
-              {f.propertyType !== 'shop' && f.propertyType !== 'office' && (
-                <Sec title="BHK">
-                  <Chips options={BHK_OPTS} value={f.bedrooms} onSelect={v => up({ bedrooms: v })} />
-                </Sec>
-              )}
-              <Sec title="Furnishing">
-                <Chips options={FURNISHING_OPTS} value={f.furnishing} onSelect={v => up({ furnishing: v })} />
-              </Sec>
-              <Sec title="Monthly Budget">
-                <DualInput minVal={f.rentMin} maxVal={f.rentMax} phMin="₹ Min" phMax="₹ 50,000" onMin={v => up({ rentMin: v })} onMax={v => up({ rentMax: v })} />
-              </Sec>
-              <Sec title="Deposit">
-                <Chips options={DEPOSIT_OPTS} value={f.deposit} onSelect={v => up({ deposit: v })} />
-              </Sec>
-              <Sec title="Amenities">
-                <MultiChips options={AMENITY_OPTS} values={f.amenities} onToggle={tog} />
-              </Sec>
-              <Sec title="Availability">
-                <Chips options={AVAILABLE_OPTS} value={f.available} onSelect={v => up({ available: v })} />
-              </Sec>
-              <Sec title="Preferred Tenant">
-                <Chips options={TENANT_OPTS} value={f.preferredTenant} onSelect={v => up({ preferredTenant: v })} />
-              </Sec>
-            </>}
-
-            {/* ── SERVICES ─────────────────────────────────────────────── */}
-            {tab === ListingCategory.SERVICES && <>
-              <Sec title="Service Type">
-                <Chips options={SERVICE_TYPES} value={f.serviceType} onSelect={v => up({ serviceType: v })} />
-              </Sec>
-              <Sec title="Experience">
-                <Chips options={EXP_OPTS} value={f.experience} onSelect={v => up({ experience: v })} />
-              </Sec>
-              <Sec title="Price Type">
-                <Chips options={PRICE_TYPE_OPTS} value={f.priceType} onSelect={v => up({ priceType: v })} />
-              </Sec>
-              <Sec title="Max Budget">
-                <TextInput style={[F.numInput, { marginTop: 4, width: '50%' }]} keyboardType="numeric" value={f.budgetMax === 0 ? '' : String(f.budgetMax)} placeholder="₹ 10,000" placeholderTextColor="#bbb" onChangeText={t => up({ budgetMax: Number(t.replace(/\D/g, '')) || 0 })} />
-              </Sec>
-              <Sec title="Other">
-                <TogRow label="Verified Providers Only" value={f.verifiedOnly} onToggle={() => up({ verifiedOnly: !f.verifiedOnly })} />
-              </Sec>
-            </>}
-
-            {/* ── JOBS ─────────────────────────────────────────────────── */}
-            {tab === ListingCategory.JOBS && <>
-              <Sec title="Job Type">
-                <Chips options={JOB_TYPE_OPTS} value={f.jobType} onSelect={v => up({ jobType: v })} />
-              </Sec>
-              <Sec title="Experience Level">
-                <Chips options={EXP_LEVEL_OPTS} value={f.experienceLevel} onSelect={v => up({ experienceLevel: v })} />
-              </Sec>
-              <Sec title="Salary Range">
-                <DualInput minVal={f.salaryMin} maxVal={f.salaryMax} phMin="₹ Min" phMax="₹ 1,00,000" onMin={v => up({ salaryMin: v })} onMax={v => up({ salaryMax: v })} />
-              </Sec>
-              <Sec title="Salary Type">
-                <Chips options={SALARY_TYPE_OPTS} value={f.salaryType} onSelect={v => up({ salaryType: v })} />
-              </Sec>
-              <Sec title="Other">
-                <TogRow label="Urgent Openings Only" value={f.urgentOnly} onToggle={() => up({ urgentOnly: !f.urgentOnly })} />
-              </Sec>
-              <Sec title="Skills">
-                <TextInput style={[F.numInput, { marginTop: 4 }]} value={f.skills} onChangeText={t => up({ skills: t })} placeholder="e.g. driving, cooking, stitching" placeholderTextColor="#bbb" />
-              </Sec>
-            </>}
-
-            {/* ── BUSINESSES ───────────────────────────────────────────── */}
-            {tab === ListingCategory.BUSINESSES && (
-              <View style={{ paddingHorizontal: 16, paddingTop: 32, alignItems: 'center' }}>
-                <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', lineHeight: 18 }}>
-                  Business listings are browsed by location.{'\n'}Use search to find specific businesses.
-                </Text>
-              </View>
-            )}
-
-            {/* ── Sort By (shared) ─────────────────────────────────────── */}
-            {tab !== ListingCategory.BUSINESSES && (
-              <Sec title="Sort By">
-                {SORT_OPTIONS.map(opt => {
-                  const on = f.sortBy === opt.key;
-                  return (
-                    <TouchableOpacity key={opt.key} style={F.sortRow} onPress={() => up({ sortBy: opt.key })} activeOpacity={0.7}>
-                      <Ionicons name={opt.icon as any} size={14} color={on ? BR : '#aaa'} style={{ marginRight: 8 }} />
-                      <Text style={[F.sortLbl, on && F.sortLblOn]}>{opt.label}</Text>
-                      <Ionicons name={on ? 'radio-button-on' : 'radio-button-off'} size={15} color={on ? BR : '#ccc'} />
-                    </TouchableOpacity>
-                  );
-                })}
-              </Sec>
-            )}
-
-          </ScrollView>
-
-          {/* ── Apply ── */}
-          <View style={F.footer}>
-            <TouchableOpacity style={F.applyBtn} onPress={() => onApply(tab, f)} activeOpacity={0.88}>
-              <Text style={F.applyTxt}>Apply Filters{n > 0 ? ` (${n})` : ''}</Text>
-              <Ionicons name="options-outline" size={14} color="#fff" />
+          {/* ── Header ── */}
+          <View style={F.header}>
+            <TouchableOpacity onPress={onClose} hitSlop={12} style={{ width: 28 }}>
+              <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
+            </TouchableOpacity>
+            <Text style={F.headerTitle}>Filters{n > 0 ? ` (${n})` : ''}</Text>
+            <TouchableOpacity onPress={() => setF({ ...DEFAULT_FILTERS })} hitSlop={12}>
+              <Text style={F.clearTxt}>Clear All</Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+
+          {/* ── Category tabs ── */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={F.tabsRow} style={F.tabsWrap}>
+            {CATEGORY_TABS.map(t => {
+              const on = tab === t.key;
+              return (
+                <TouchableOpacity key={t.key} style={[F.tab, on && F.tabOn]} onPress={() => handleTabChange(t.key as MarketplaceTab)} activeOpacity={0.75}>
+                  <Text style={[F.tabTxt, on && F.tabTxtOn]}>{t.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <ScrollView contentContainerStyle={F.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+              {/* ── BUY/SELL ─────────────────────────────────────────────── */}
+              {tab === ListingCategory.BUY_SELL && <>
+                <Sec title="Subcategory">
+                  <Chips options={SUBCATEGORIES} value={f.subCategory} onSelect={v => up({ subCategory: v })} />
+                </Sec>
+                <Sec title="Condition">
+                  <Chips options={CONDITIONS} value={f.condition} onSelect={v => up({ condition: v })} />
+                </Sec>
+                <Sec title="Price Range">
+                  <DualInput minVal={f.priceMin} maxVal={f.priceMax} phMin="₹ Min" phMax="₹ 5,00,000" onMin={v => up({ priceMin: v })} onMax={v => up({ priceMax: v })} />
+                </Sec>
+                <Sec title="Other">
+                  <TogRow label="Negotiable Only" value={f.negotiableOnly} onToggle={() => up({ negotiableOnly: !f.negotiableOnly })} />
+                </Sec>
+                <Sec title="Posted">
+                  <Chips options={POSTED_OPTS} value={f.posted} onSelect={v => up({ posted: v })} />
+                </Sec>
+              </>}
+
+              {/* ── RENT ─────────────────────────────────────────────────── */}
+              {tab === ListingCategory.RENT && <>
+                <Sec title="Property Type">
+                  <Chips options={PROPERTY_TYPES} value={f.propertyType} onSelect={v => up({ propertyType: v, bedrooms: null })} />
+                </Sec>
+                {f.propertyType !== 'shop' && f.propertyType !== 'office' && (
+                  <Sec title="BHK">
+                    <Chips options={BHK_OPTS} value={f.bedrooms} onSelect={v => up({ bedrooms: v })} />
+                  </Sec>
+                )}
+                <Sec title="Furnishing">
+                  <Chips options={FURNISHING_OPTS} value={f.furnishing} onSelect={v => up({ furnishing: v })} />
+                </Sec>
+                <Sec title="Monthly Budget">
+                  <DualInput minVal={f.rentMin} maxVal={f.rentMax} phMin="₹ Min" phMax="₹ 50,000" onMin={v => up({ rentMin: v })} onMax={v => up({ rentMax: v })} />
+                </Sec>
+                <Sec title="Deposit">
+                  <Chips options={DEPOSIT_OPTS} value={f.deposit} onSelect={v => up({ deposit: v })} />
+                </Sec>
+                <Sec title="Amenities">
+                  <MultiChips options={AMENITY_OPTS} values={f.amenities} onToggle={tog} />
+                </Sec>
+                <Sec title="Availability">
+                  <Chips options={AVAILABLE_OPTS} value={f.available} onSelect={v => up({ available: v })} />
+                </Sec>
+                <Sec title="Preferred Tenant">
+                  <Chips options={TENANT_OPTS} value={f.preferredTenant} onSelect={v => up({ preferredTenant: v })} />
+                </Sec>
+              </>}
+
+              {/* ── SERVICES ─────────────────────────────────────────────── */}
+              {tab === ListingCategory.SERVICES && <>
+                <Sec title="Service Type">
+                  <Chips options={SERVICE_TYPES} value={f.serviceType} onSelect={v => up({ serviceType: v })} />
+                </Sec>
+                <Sec title="Experience">
+                  <Chips options={EXP_OPTS} value={f.experience} onSelect={v => up({ experience: v })} />
+                </Sec>
+                <Sec title="Price Type">
+                  <Chips options={PRICE_TYPE_OPTS} value={f.priceType} onSelect={v => up({ priceType: v })} />
+                </Sec>
+                <Sec title="Max Budget">
+                  <TextInput style={[F.numInput, { marginTop: 4, width: '50%' }]} keyboardType="numeric" value={f.budgetMax === 0 ? '' : String(f.budgetMax)} placeholder="₹ 10,000" placeholderTextColor="#bbb" onChangeText={t => up({ budgetMax: Number(t.replace(/\D/g, '')) || 0 })} />
+                </Sec>
+                <Sec title="Other">
+                  <TogRow label="Verified Providers Only" value={f.verifiedOnly} onToggle={() => up({ verifiedOnly: !f.verifiedOnly })} />
+                </Sec>
+              </>}
+
+              {/* ── JOBS ─────────────────────────────────────────────────── */}
+              {tab === ListingCategory.JOBS && <>
+                <Sec title="Job Type">
+                  <Chips options={JOB_TYPE_OPTS} value={f.jobType} onSelect={v => up({ jobType: v })} />
+                </Sec>
+                <Sec title="Experience Level">
+                  <Chips options={EXP_LEVEL_OPTS} value={f.experienceLevel} onSelect={v => up({ experienceLevel: v })} />
+                </Sec>
+                <Sec title="Salary Range">
+                  <DualInput minVal={f.salaryMin} maxVal={f.salaryMax} phMin="₹ Min" phMax="₹ 1,00,000" onMin={v => up({ salaryMin: v })} onMax={v => up({ salaryMax: v })} />
+                </Sec>
+                <Sec title="Salary Type">
+                  <Chips options={SALARY_TYPE_OPTS} value={f.salaryType} onSelect={v => up({ salaryType: v })} />
+                </Sec>
+                <Sec title="Other">
+                  <TogRow label="Urgent Openings Only" value={f.urgentOnly} onToggle={() => up({ urgentOnly: !f.urgentOnly })} />
+                </Sec>
+                <Sec title="Skills">
+                  <TextInput style={[F.numInput, { marginTop: 4 }]} value={f.skills} onChangeText={t => up({ skills: t })} placeholder="e.g. driving, cooking, stitching" placeholderTextColor="#bbb" />
+                </Sec>
+              </>}
+
+              {/* ── BUSINESSES ───────────────────────────────────────────── */}
+              {tab === ListingCategory.BUSINESSES && (
+                <View style={{ paddingHorizontal: 16, paddingTop: 32, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', lineHeight: 18 }}>
+                    Business listings are browsed by location.{'\n'}Use search to find specific businesses.
+                  </Text>
+                </View>
+              )}
+
+              {/* ── Sort By (shared) ─────────────────────────────────────── */}
+              {tab !== ListingCategory.BUSINESSES && (
+                <Sec title="Sort By">
+                  {SORT_OPTIONS.map(opt => {
+                    const on = f.sortBy === opt.key;
+                    return (
+                      <TouchableOpacity key={opt.key} style={F.sortRow} onPress={() => up({ sortBy: opt.key })} activeOpacity={0.7}>
+                        <Ionicons name={opt.icon as any} size={14} color={on ? BR : '#aaa'} style={{ marginRight: 8 }} />
+                        <Text style={[F.sortLbl, on && F.sortLblOn]}>{opt.label}</Text>
+                        <Ionicons name={on ? 'radio-button-on' : 'radio-button-off'} size={15} color={on ? BR : '#ccc'} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </Sec>
+              )}
+
+            </ScrollView>
+
+            {/* ── Apply ── */}
+            <View style={F.footer}>
+              <TouchableOpacity style={F.applyBtn} onPress={() => onApply(tab, f)} activeOpacity={0.88}>
+                <Text style={F.applyTxt}>Apply Filters{n > 0 ? ` (${n})` : ''}</Text>
+                <Ionicons name="options-outline" size={14} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </ResponsiveFrame>
     </Modal>
   );
 }

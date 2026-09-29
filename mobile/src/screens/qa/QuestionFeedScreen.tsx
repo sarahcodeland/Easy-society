@@ -32,6 +32,7 @@ interface QuestionRow {
   title: string;
   body: string | null;
   author_name?: string;
+  is_anonymous?: boolean;
   vote_score: string;
   recommendation_count: string;
   answer_count: string;
@@ -88,7 +89,7 @@ function QuestionCard({
         <View style={S.metaRow}>
           <Avatar name={item.author_name ?? '?'} size={30} />
           <Text style={S.authorName} numberOfLines={1}>
-            {item.author_name ?? 'Community Member'}
+            {item.is_anonymous ? 'Anonymous' : (item.author_name ?? 'Community Member')}
           </Text>
           <View style={S.metaDot} />
           <Text style={S.timeText}>{timeAgo(item.created_at)}</Text>

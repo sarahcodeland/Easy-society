@@ -78,7 +78,7 @@ function timeAgo(d?: string) {
 
 function formatPrice(p: number | null, category: string) {
   if (p == null) return null;
-  const fmt = `₹${p.toLocaleString('en-IN')}`;
+  const fmt = `₹${Number(p).toLocaleString('en-IN')}`;
   if (category === ListingCategory.RENT) return `${fmt} / mo`;
   return fmt;
 }

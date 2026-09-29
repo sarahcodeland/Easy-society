@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   FlatList,
   Image,
   Modal,
@@ -19,11 +18,10 @@ import { apiClient } from '../../api/client';
 import Avatar from '../../components/Avatar';
 import { colors, spacing } from '../../theme';
 import { useNavPadding } from '../../hooks/useNavPadding';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useLocationStore } from '../../store/locationStore';
 
-const { width: SW } = Dimensions.get('window');
 const CARD_MX = 16;
-const CARD_W  = SW - CARD_MX * 2;
 const CARD_H  = 320;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -49,9 +47,18 @@ function hoursLeft(expiresAt: string) {
 
 // ── Status Card ───────────────────────────────────────────────────────────────
 
+// Text-only statuses: shrink the type for longer text and narrow phones so it
+// stays inside the visible area above the bottom action bar.
+function textStatusFont(text: string | null | undefined, isSmall: boolean) {
+  const len = text?.length ?? 0;
+  const size = (len > 90 ? 18 : len > 45 ? 22 : 28) - (isSmall ? 3 : 0);
+  return { fontSize: size, lineHeight: Math.round(size * 1.28), letterSpacing: size >= 26 ? 1.5 : 0.5 };
+}
+
 function StatusCard({ item, onView }: { item: StatusRow; onView: (s: StatusRow) => void }) {
   const likeAnim = useRef(new Animated.Value(1)).current;
   const [liked, setLiked] = useState(false);
+  const { isSmall } = useResponsive();
 
   const hasMedia = (item.media_type === 'photo' || item.media_type === 'video') && !!item.content_url;
 
@@ -87,7 +94,14 @@ function StatusCard({ item, onView }: { item: StatusRow; onView: (s: StatusRow) 
         />
       ) : (
         <View style={[StyleSheet.absoluteFillObject, S.textBg]}>
-          <Text style={S.textBgContent} numberOfLines={6}>{item.text_content}</Text>
+          <Text
+            style={[S.textBgContent, textStatusFont(item.text_content, isSmall)]}
+            numberOfLines={5}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {item.text_content}
+          </Text>
         </View>
       )}
 
@@ -136,17 +150,17 @@ function StatusCard({ item, onView }: { item: StatusRow; onView: (s: StatusRow) 
                   color={liked ? '#FF5B7A' : '#fff'}
                 />
               </Animated.View>
-              <Text style={S.actionCount}>{(item.like_count ?? 0) + (liked ? 1 : 0)}</Text>
+              <Text style={S.actionCount}>{Number(item.like_count ?? 0) + (liked ? 1 : 0)}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={S.actionBtn} activeOpacity={0.72}>
               <Ionicons name="chatbubble-outline" size={20} color="#fff" />
-              <Text style={S.actionCount}>{item.comment_count ?? 0}</Text>
+              <Text style={S.actionCount}>{Number(item.comment_count ?? 0)}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={S.actionBtn} activeOpacity={0.72}>
               <Ionicons name="repeat-outline" size={22} color="#fff" />
-              <Text style={S.actionCount}>{item.repost_count ?? 0}</Text>
+              <Text style={S.actionCount}>{Number(item.repost_count ?? 0)}</Text>
             </TouchableOpacity>
           </View>
 
@@ -273,7 +287,7 @@ const S = StyleSheet.create({
 
   // ── Card
   card: {
-    width: CARD_W, height: CARD_H,
+    width: '100%', height: CARD_H,
     borderRadius: 24, overflow: 'hidden',
     backgroundColor: '#C5A898',
     shadowColor: '#3D1F17',
@@ -290,11 +304,11 @@ const S = StyleSheet.create({
   },
   textBg: {
     backgroundColor: '#1B3A2D',
-    alignItems: 'center', justifyContent: 'center', padding: 28,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 22, paddingTop: 56, paddingBottom: CARD_H * 0.30,
   },
   textBgContent: {
-    fontSize: 28, fontWeight: '800', color: '#fff',
-    textAlign: 'center', lineHeight: 36, letterSpacing: 2,
+    fontWeight: '800', color: '#fff', textAlign: 'center',
   },
 
   // ── Top row
@@ -306,7 +320,7 @@ const S = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     backgroundColor: 'rgba(0,0,0,0.38)',
     borderRadius: 100, paddingLeft: 4, paddingRight: 10, paddingVertical: 5,
-    maxWidth: CARD_W * 0.62,
+    maxWidth: '62%',
   },
   pillImg: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: '#fff' },
   pillImgFallback: {

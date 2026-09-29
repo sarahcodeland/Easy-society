@@ -5,6 +5,7 @@ import { VISIBILITY_LEVEL_ORDER, VisibilityLevel } from '@easysociety/shared';
 import { colors, radii, spacing } from '../theme';
 import { useLocationStore } from '../store/locationStore';
 import LocationPickerModal from './LocationPickerModal';
+import ResponsiveFrame from './ResponsiveFrame';
 
 interface Props {
   visible: boolean;
@@ -35,55 +36,57 @@ export default function GlobalFiltersModal({ visible, onClose }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <SafeAreaView style={S.safe}>
-        {/* Header */}
-        <View style={S.header}>
-          <Text style={S.headerTitle}>Filters</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={8} style={S.closeBtn}>
-            <Ionicons name="close" size={22} color={colors.textPrimary} />
+      <ResponsiveFrame backdrop="#EDE7E3">
+        <SafeAreaView style={S.safe}>
+          {/* Header */}
+          <View style={S.header}>
+            <Text style={S.headerTitle}>Filters</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={8} style={S.closeBtn}>
+              <Ionicons name="close" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={S.body}>
+            <Text style={S.sectionLabel}>LOCATION</Text>
+            <TouchableOpacity
+              style={S.locationRow}
+              onPress={() => setPickerVisible(true)}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="location-sharp" size={16} color={colors.primary} />
+              <Text style={S.locationName} numberOfLines={1}>
+                {activeLocationName || 'My Area'}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <Text style={S.sectionLabel}>SHOW CONTENT FROM</Text>
+            {VISIBILITY_LEVEL_ORDER.map((level) => {
+              const active = visibilityLevel === level;
+              return (
+                <TouchableOpacity
+                  key={level}
+                  style={[S.levelRow, active && S.levelRowActive]}
+                  onPress={() => setVisibilityLevel(level)}
+                  activeOpacity={0.75}
+                >
+                  <View style={S.levelText}>
+                    <Text style={[S.levelLabel, active && S.levelLabelActive]}>{LABELS[level]}</Text>
+                    <Text style={S.levelDesc}>{DESCRIPTIONS[level]}</Text>
+                  </View>
+                  {active && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity style={S.doneBtn} onPress={onClose} activeOpacity={0.85}>
+            <Text style={S.doneBtnText}>Done</Text>
           </TouchableOpacity>
-        </View>
+        </SafeAreaView>
 
-        <View style={S.body}>
-          <Text style={S.sectionLabel}>LOCATION</Text>
-          <TouchableOpacity
-            style={S.locationRow}
-            onPress={() => setPickerVisible(true)}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="location-sharp" size={16} color={colors.primary} />
-            <Text style={S.locationName} numberOfLines={1}>
-              {activeLocationName || 'My Area'}
-            </Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          <Text style={S.sectionLabel}>SHOW CONTENT FROM</Text>
-          {VISIBILITY_LEVEL_ORDER.map((level) => {
-            const active = visibilityLevel === level;
-            return (
-              <TouchableOpacity
-                key={level}
-                style={[S.levelRow, active && S.levelRowActive]}
-                onPress={() => setVisibilityLevel(level)}
-                activeOpacity={0.75}
-              >
-                <View style={S.levelText}>
-                  <Text style={[S.levelLabel, active && S.levelLabelActive]}>{LABELS[level]}</Text>
-                  <Text style={S.levelDesc}>{DESCRIPTIONS[level]}</Text>
-                </View>
-                {active && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <TouchableOpacity style={S.doneBtn} onPress={onClose} activeOpacity={0.85}>
-          <Text style={S.doneBtnText}>Done</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-
-      <LocationPickerModal visible={pickerVisible} onClose={() => setPickerVisible(false)} />
+        <LocationPickerModal visible={pickerVisible} onClose={() => setPickerVisible(false)} />
+      </ResponsiveFrame>
     </Modal>
   );
 }
