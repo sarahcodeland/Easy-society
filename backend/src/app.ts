@@ -23,6 +23,12 @@ import communityRoutes from './modules/community/routes';
 export function createApp() {
   const app = express();
 
+  // Behind Render's proxy (and Cloudflare) the socket IP is the proxy's, so
+  // without this every user shares one req.ip and one auth rate-limit bucket.
+  // Worst case of trusting X-Forwarded-For is a spoofed IP dodging the
+  // per-IP limit — far better than locking the whole app out at 10 logins/min.
+  app.set('trust proxy', true);
+
   app.use(helmet());
   app.use(cors());
   app.use(morgan('dev'));
