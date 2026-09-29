@@ -10,6 +10,15 @@ const config = {
       path.resolve(__dirname, 'node_modules'),
       path.resolve(__dirname, '../shared/node_modules'),
     ],
+    // Bundle @easysociety/shared from its TypeScript source instead of its
+    // gitignored dist/. EAS installs with yarn, which *copies* the file:
+    // dependency before any build hook runs, so dist/ never exists there.
+    resolveRequest: (context, moduleName, platform) => {
+      if (moduleName === '@easysociety/shared') {
+        return { type: 'sourceFile', filePath: path.resolve(__dirname, '../shared/src/index.ts') };
+      }
+      return context.resolveRequest(context, moduleName, platform);
+    },
   },
 };
 
